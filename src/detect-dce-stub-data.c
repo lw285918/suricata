@@ -31,10 +31,10 @@
 
 #include "detect-engine.h"
 #include "detect-engine-build.h"
-#include "detect-engine-mpm.h"
-#include "detect-engine-state.h"
-#include "detect-engine-prefilter.h"
-#include "detect-engine-content-inspection.h"
+#include "detect/engine/mpm.h"
+#include "detect/engine/state.h"
+#include "detect/engine/prefilter.h"
+#include "detect/engine/content-inspection.h"
 
 #include "flow.h"
 #include "flow-var.h"
@@ -48,16 +48,16 @@
 #include "detect-dce-stub-data.h"
 #include "detect-dce-iface.h"
 
-#include "util-debug.h"
+#include "util/debug.h"
 
-#include "util-unittest.h"
-#include "util-unittest-helper.h"
+#include "util/unittest.h"
+#include "util/unittest-helper.h"
 
 #include "stream-tcp.h"
 
 #include "rust.h"
 
-#define BUFFER_NAME "dce_stub_data"
+#define BUFFER_NAME  "dce_stub_data"
 #define KEYWORD_NAME "dce_stub_data"
 
 static int DetectDceStubDataSetup(DetectEngineCtx *, Signature *, const char *);
@@ -67,15 +67,14 @@ static void DetectDceStubDataRegisterTests(void);
 static int g_dce_stub_data_buffer_id = 0;
 
 static InspectionBuffer *GetSMBData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms,
-        Flow *_f, const uint8_t flow_flags,
-        void *txv, const int list_id)
+        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t flow_flags, void *txv,
+        const int list_id)
 {
     InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
     if (!buffer->initialized) {
         uint32_t data_len = 0;
         const uint8_t *data = NULL;
-        uint8_t dir = flow_flags & (STREAM_TOSERVER|STREAM_TOCLIENT);
+        uint8_t dir = flow_flags & (STREAM_TOSERVER | STREAM_TOCLIENT);
         if (rs_smb_tx_get_stub_data(txv, dir, &data, &data_len) != 1)
             return NULL;
         SCLogDebug("have data!");
@@ -87,9 +86,8 @@ static InspectionBuffer *GetSMBData(DetectEngineThreadCtx *det_ctx,
 }
 
 static InspectionBuffer *GetDCEData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms,
-        Flow *_f, const uint8_t flow_flags,
-        void *txv, const int list_id)
+        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t flow_flags, void *txv,
+        const int list_id)
 {
     InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
     if (!buffer->initialized) {
@@ -123,37 +121,25 @@ void DetectDceStubDataRegister(void)
 #ifdef UNITTESTS
     sigmatch_table[DETECT_DCE_STUB_DATA].RegisterTests = DetectDceStubDataRegisterTests;
 #endif
-    sigmatch_table[DETECT_DCE_STUB_DATA].flags |= SIGMATCH_NOOPT|SIGMATCH_INFO_STICKY_BUFFER;
+    sigmatch_table[DETECT_DCE_STUB_DATA].flags |= SIGMATCH_NOOPT | SIGMATCH_INFO_STICKY_BUFFER;
 
-    DetectAppLayerInspectEngineRegister2(BUFFER_NAME,
-            ALPROTO_SMB, SIG_FLAG_TOSERVER, 0,
-            DetectEngineInspectBufferGeneric,
-            GetSMBData);
-    DetectAppLayerMpmRegister2(BUFFER_NAME, SIG_FLAG_TOSERVER, 2,
-            PrefilterGenericMpmRegister, GetSMBData,
-            ALPROTO_SMB, 0);
-    DetectAppLayerInspectEngineRegister2(BUFFER_NAME,
-            ALPROTO_SMB, SIG_FLAG_TOCLIENT, 0,
-            DetectEngineInspectBufferGeneric,
-            GetSMBData);
-    DetectAppLayerMpmRegister2(BUFFER_NAME, SIG_FLAG_TOCLIENT, 2,
-            PrefilterGenericMpmRegister, GetSMBData,
-            ALPROTO_SMB, 0);
+    DetectAppLayerInspectEngineRegister2(BUFFER_NAME, ALPROTO_SMB, SIG_FLAG_TOSERVER, 0,
+            DetectEngineInspectBufferGeneric, GetSMBData);
+    DetectAppLayerMpmRegister2(BUFFER_NAME, SIG_FLAG_TOSERVER, 2, PrefilterGenericMpmRegister,
+            GetSMBData, ALPROTO_SMB, 0);
+    DetectAppLayerInspectEngineRegister2(BUFFER_NAME, ALPROTO_SMB, SIG_FLAG_TOCLIENT, 0,
+            DetectEngineInspectBufferGeneric, GetSMBData);
+    DetectAppLayerMpmRegister2(BUFFER_NAME, SIG_FLAG_TOCLIENT, 2, PrefilterGenericMpmRegister,
+            GetSMBData, ALPROTO_SMB, 0);
 
-    DetectAppLayerInspectEngineRegister2(BUFFER_NAME,
-            ALPROTO_DCERPC, SIG_FLAG_TOSERVER, 0,
-            DetectEngineInspectBufferGeneric,
-            GetDCEData);
-    DetectAppLayerMpmRegister2(BUFFER_NAME, SIG_FLAG_TOSERVER, 2,
-            PrefilterGenericMpmRegister, GetDCEData,
-            ALPROTO_DCERPC, 0);
-    DetectAppLayerInspectEngineRegister2(BUFFER_NAME,
-            ALPROTO_DCERPC, SIG_FLAG_TOCLIENT, 0,
-            DetectEngineInspectBufferGeneric,
-            GetDCEData);
-    DetectAppLayerMpmRegister2(BUFFER_NAME, SIG_FLAG_TOCLIENT, 2,
-            PrefilterGenericMpmRegister, GetDCEData,
-            ALPROTO_DCERPC, 0);
+    DetectAppLayerInspectEngineRegister2(BUFFER_NAME, ALPROTO_DCERPC, SIG_FLAG_TOSERVER, 0,
+            DetectEngineInspectBufferGeneric, GetDCEData);
+    DetectAppLayerMpmRegister2(BUFFER_NAME, SIG_FLAG_TOSERVER, 2, PrefilterGenericMpmRegister,
+            GetDCEData, ALPROTO_DCERPC, 0);
+    DetectAppLayerInspectEngineRegister2(BUFFER_NAME, ALPROTO_DCERPC, SIG_FLAG_TOCLIENT, 0,
+            DetectEngineInspectBufferGeneric, GetDCEData);
+    DetectAppLayerMpmRegister2(BUFFER_NAME, SIG_FLAG_TOCLIENT, 2, PrefilterGenericMpmRegister,
+            GetDCEData, ALPROTO_DCERPC, 0);
 
     g_dce_stub_data_buffer_id = DetectBufferTypeGetByName(BUFFER_NAME);
 }
@@ -181,7 +167,7 @@ static int DetectDceStubDataSetup(DetectEngineCtx *de_ctx, Signature *s, const c
 /************************************Unittests*********************************/
 
 #ifdef UNITTESTS
-#include "detect-engine-alert.h"
+#include "detect/engine/alert.h"
 
 /**
  * \test Test a valid dce_stub_data entry with  bind, bind_ack, request frags.
@@ -199,6 +185,7 @@ static int DetectDceStubDataTestParse02(void)
     DCERPCState *dcerpc_state = NULL;
     int r = 0;
 
+    // clang-format off
     uint8_t dcerpc_bind[] = {
         0x05, 0x00, 0x0b, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x48, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
@@ -210,7 +197,9 @@ static int DetectDceStubDataTestParse02(void)
         0xeb, 0x1c, 0xc9, 0x11, 0x9f, 0xe8, 0x08, 0x00,
         0x2b, 0x10, 0x48, 0x60, 0x02, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_bindack[] = {
         0x05, 0x00, 0x0c, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x44, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
@@ -222,9 +211,11 @@ static int DetectDceStubDataTestParse02(void)
         0x9f, 0xe8, 0x08, 0x00, 0x2b, 0x10, 0x48, 0x60,
         0x02, 0x00, 0x00, 0x00
     };
+    // clang-format on
 
     /* todo chop the request frag length and change the
      * length related parameters in the frag */
+    // clang-format off
     uint8_t dcerpc_request[] = {
         0x05, 0x00, 0x00, 0x03, 0x10, 0x00, 0x00, 0x00,
         0xec, 0x0c, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
@@ -641,6 +632,7 @@ static int DetectDceStubDataTestParse02(void)
         0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42,
         0x01, 0x02, 0x03, 0x04
     };
+    // clang-format on
 
     uint32_t dcerpc_bind_len = sizeof(dcerpc_bind);
     uint32_t dcerpc_bindack_len = sizeof(dcerpc_bindack);
@@ -659,7 +651,7 @@ static int DetectDceStubDataTestParse02(void)
     p->flow = &f;
     p->flowflags |= FLOW_PKT_TOSERVER;
     p->flowflags |= FLOW_PKT_ESTABLISHED;
-    p->flags |= PKT_HAS_FLOW|PKT_STREAM_EST;
+    p->flags |= PKT_HAS_FLOW | PKT_STREAM_EST;
     f.alproto = ALPROTO_DCERPC;
 
     StreamTcpInitConfig(true);
@@ -670,20 +662,18 @@ static int DetectDceStubDataTestParse02(void)
 
     de_ctx->flags |= DE_QUIET;
 
-    s = de_ctx->sig_list = SigInit(de_ctx,
-                                   "alert tcp any any -> any any "
-                                   "(msg:\"DCERPC\"; "
-                                   "dce_stub_data; content:\"|42 42 42 42|\";"
-                                   "sid:1;)");
+    s = de_ctx->sig_list = SigInit(de_ctx, "alert tcp any any -> any any "
+                                           "(msg:\"DCERPC\"; "
+                                           "dce_stub_data; content:\"|42 42 42 42|\";"
+                                           "sid:1;)");
     if (s == NULL)
         goto end;
 
     SigGroupBuild(de_ctx);
     DetectEngineThreadCtxInit(&th_v, (void *)de_ctx, (void *)&det_ctx);
 
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOSERVER | STREAM_START, dcerpc_bind,
-                            dcerpc_bind_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOSERVER | STREAM_START,
+            dcerpc_bind, dcerpc_bind_len);
     if (r != 0) {
         SCLogDebug("AppLayerParse for dcerpc failed.  Returned %" PRId32, r);
         goto end;
@@ -695,7 +685,7 @@ static int DetectDceStubDataTestParse02(void)
         goto end;
     }
 
-    p->flowflags &=~ FLOW_PKT_TOCLIENT;
+    p->flowflags &= ~FLOW_PKT_TOCLIENT;
     p->flowflags |= FLOW_PKT_TOSERVER;
     /* do detect */
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
@@ -705,15 +695,14 @@ static int DetectDceStubDataTestParse02(void)
         goto end;
 
     /* do detect */
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOCLIENT, dcerpc_bindack,
-                            dcerpc_bindack_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOCLIENT, dcerpc_bindack,
+            dcerpc_bindack_len);
     if (r != 0) {
         SCLogDebug("AppLayerParse for dcerpc failed.  Returned %" PRId32, r);
         goto end;
     }
 
-    p->flowflags &=~ FLOW_PKT_TOSERVER;
+    p->flowflags &= ~FLOW_PKT_TOSERVER;
     p->flowflags |= FLOW_PKT_TOCLIENT;
     /* do detect */
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
@@ -722,15 +711,14 @@ static int DetectDceStubDataTestParse02(void)
     if (PacketAlertCheck(p, 1))
         goto end;
 
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOSERVER | STREAM_EOF, dcerpc_request,
-                            dcerpc_request_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOSERVER | STREAM_EOF,
+            dcerpc_request, dcerpc_request_len);
     if (r != 0) {
         SCLogDebug("AppLayerParse for dcerpc failed.  Returned %" PRId32, r);
         goto end;
     }
 
-    p->flowflags &=~ FLOW_PKT_TOCLIENT;
+    p->flowflags &= ~FLOW_PKT_TOCLIENT;
     p->flowflags |= FLOW_PKT_TOSERVER;
     /* do detect */
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
@@ -741,7 +729,7 @@ static int DetectDceStubDataTestParse02(void)
 
     result = 1;
 
- end:
+end:
     if (alp_tctx != NULL)
         AppLayerParserThreadCtxFree(alp_tctx);
     SigGroupCleanup(de_ctx);
@@ -774,6 +762,7 @@ static int DetectDceStubDataTestParse03(void)
 
     /* todo chop the request frag length and change the
      * length related parameters in the frag */
+    // clang-format off
     uint8_t dcerpc_request[] = {
         0x05, 0x00, 0x00, 0x03, 0x10, 0x00, 0x00, 0x00,
         0xec, 0x0c, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
@@ -1190,6 +1179,7 @@ static int DetectDceStubDataTestParse03(void)
         0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42,
         0x01, 0x02, 0x03, 0x04
     };
+    // clang-format on
 
     uint32_t dcerpc_request_len = sizeof(dcerpc_request);
 
@@ -1207,7 +1197,7 @@ static int DetectDceStubDataTestParse03(void)
     p->flow = &f;
     p->flowflags |= FLOW_PKT_TOSERVER;
     p->flowflags |= FLOW_PKT_ESTABLISHED;
-    p->flags |= PKT_HAS_FLOW|PKT_STREAM_EST;
+    p->flags |= PKT_HAS_FLOW | PKT_STREAM_EST;
     f.alproto = ALPROTO_DCERPC;
 
     StreamTcpInitConfig(true);
@@ -1217,25 +1207,23 @@ static int DetectDceStubDataTestParse03(void)
 
     de_ctx->flags |= DE_QUIET;
 
-    s = de_ctx->sig_list = SigInit(de_ctx,
-                                   "alert tcp any any -> any any "
-                                   "(msg:\"DCERPC\"; "
-                                   "dce_stub_data; content:\"|42 42 42 42|\";"
-                                   "sid:1;)");
+    s = de_ctx->sig_list = SigInit(de_ctx, "alert tcp any any -> any any "
+                                           "(msg:\"DCERPC\"; "
+                                           "dce_stub_data; content:\"|42 42 42 42|\";"
+                                           "sid:1;)");
     FAIL_IF(s == NULL);
 
     SigGroupBuild(de_ctx);
     DetectEngineThreadCtxInit(&th_v, (void *)de_ctx, (void *)&det_ctx);
 
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOSERVER | STREAM_START, dcerpc_request,
-                            dcerpc_request_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOSERVER | STREAM_START,
+            dcerpc_request, dcerpc_request_len);
     FAIL_IF(r != 0);
 
     dcerpc_state = f.alstate;
-    FAIL_IF (dcerpc_state == NULL);
+    FAIL_IF(dcerpc_state == NULL);
 
-    p->flowflags &=~ FLOW_PKT_TOCLIENT;
+    p->flowflags &= ~FLOW_PKT_TOCLIENT;
     p->flowflags |= FLOW_PKT_TOSERVER;
     /* do detect */
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
@@ -1265,6 +1253,7 @@ static int DetectDceStubDataTestParse04(void)
     DCERPCState *dcerpc_state = NULL;
     int r = 0;
 
+    // clang-format off
     uint8_t dcerpc_bind[] = {
         0x05, 0x00, 0x0b, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x48, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
@@ -1276,7 +1265,9 @@ static int DetectDceStubDataTestParse04(void)
         0xeb, 0x1c, 0xc9, 0x11, 0x9f, 0xe8, 0x08, 0x00,
         0x2b, 0x10, 0x48, 0x60, 0x02, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_bindack[] = {
         0x05, 0x00, 0x0c, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x44, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
@@ -1288,7 +1279,9 @@ static int DetectDceStubDataTestParse04(void)
         0x9f, 0xe8, 0x08, 0x00, 0x2b, 0x10, 0x48, 0x60,
         0x02, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_request1[] = {
         0x05, 0x00, 0x00, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x24, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
@@ -1296,7 +1289,9 @@ static int DetectDceStubDataTestParse04(void)
         0x2c, 0xfd, 0xb5, 0x00, 0x40, 0xaa, 0x01, 0x00,
         0x00, 0x00, 0x00, 0x02,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_response1[] = {
         0x05, 0x00, 0x02, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x30, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
@@ -1305,7 +1300,9 @@ static int DetectDceStubDataTestParse04(void)
         0xf0, 0x57, 0xd8, 0x11, 0xb0, 0x05, 0x00, 0x0c,
         0x29, 0x87, 0xea, 0xe9, 0x00, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_request2[] = {
         0x05, 0x00, 0x00, 0x03, 0x10, 0x00, 0x00, 0x00,
         0xa4, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
@@ -1329,7 +1326,9 @@ static int DetectDceStubDataTestParse04(void)
         0x6e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x03, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_response2[] = {
         0x05, 0x00, 0x02, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x30, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
@@ -1338,7 +1337,9 @@ static int DetectDceStubDataTestParse04(void)
         0xf0, 0x57, 0xd8, 0x11, 0xb0, 0x05, 0x00, 0x0c,
         0x29, 0x87, 0xea, 0xe9, 0x00, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_request3[] = {
         0x05, 0x00, 0x00, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x70, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
@@ -1355,13 +1356,16 @@ static int DetectDceStubDataTestParse04(void)
         0x32, 0x00, 0x2e, 0x00, 0x45, 0x00, 0x58, 0x00,
         0x45, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_response3[] = {
         0x05, 0x00, 0x02, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x1c, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
         0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
     uint32_t dcerpc_bind_len = sizeof(dcerpc_bind);
     uint32_t dcerpc_bindack_len = sizeof(dcerpc_bindack);
@@ -1389,7 +1393,7 @@ static int DetectDceStubDataTestParse04(void)
     p->flow = &f;
     p->flowflags |= FLOW_PKT_TOSERVER;
     p->flowflags |= FLOW_PKT_ESTABLISHED;
-    p->flags |= PKT_HAS_FLOW|PKT_STREAM_EST;
+    p->flags |= PKT_HAS_FLOW | PKT_STREAM_EST;
     f.alproto = ALPROTO_DCERPC;
 
     StreamTcpInitConfig(true);
@@ -1400,15 +1404,18 @@ static int DetectDceStubDataTestParse04(void)
 
     de_ctx->flags |= DE_QUIET;
 
-    s = DetectEngineAppendSig(de_ctx, "alert tcp any any -> any any "
+    s = DetectEngineAppendSig(de_ctx,
+            "alert tcp any any -> any any "
             "(msg:\"DCERPC\"; dce_stub_data; content:\"|00 02|\"; sid:1;)");
     if (s == NULL)
         goto end;
-    s = DetectEngineAppendSig(de_ctx, "alert tcp any any -> any any "
+    s = DetectEngineAppendSig(de_ctx,
+            "alert tcp any any -> any any "
             "(msg:\"DCERPC\"; dce_stub_data; content:\"|00 75|\"; sid:2;)");
     if (s == NULL)
         goto end;
-    s = DetectEngineAppendSig(de_ctx, "alert tcp any any -> any any "
+    s = DetectEngineAppendSig(de_ctx,
+            "alert tcp any any -> any any "
             "(msg:\"DCERPC\"; dce_stub_data; content:\"|00 18|\"; sid:3;)");
     if (s == NULL)
         goto end;
@@ -1416,14 +1423,13 @@ static int DetectDceStubDataTestParse04(void)
     SigGroupBuild(de_ctx);
     DetectEngineThreadCtxInit(&th_v, (void *)de_ctx, (void *)&det_ctx);
 
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOSERVER | STREAM_START, dcerpc_bind,
-                            dcerpc_bind_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOSERVER | STREAM_START,
+            dcerpc_bind, dcerpc_bind_len);
     if (r != 0) {
         SCLogDebug("AppLayerParse for dcerpc failed.  Returned %" PRId32, r);
         goto end;
     }
-    p->flowflags &=~ FLOW_PKT_TOCLIENT;
+    p->flowflags &= ~FLOW_PKT_TOCLIENT;
     p->flowflags |= FLOW_PKT_TOSERVER;
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
 
@@ -1433,27 +1439,25 @@ static int DetectDceStubDataTestParse04(void)
         goto end;
     }
 
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOCLIENT, dcerpc_bindack,
-                            dcerpc_bindack_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOCLIENT, dcerpc_bindack,
+            dcerpc_bindack_len);
     if (r != 0) {
         SCLogDebug("AppLayerParse for dcerpc failed.  Returned %" PRId32, r);
         goto end;
     }
-    p->flowflags &=~ FLOW_PKT_TOSERVER;
+    p->flowflags &= ~FLOW_PKT_TOSERVER;
     p->flowflags |= FLOW_PKT_TOCLIENT;
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
 
     /* request1 */
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOSERVER, dcerpc_request1,
-                            dcerpc_request1_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOSERVER, dcerpc_request1,
+            dcerpc_request1_len);
     if (r != 0) {
         SCLogDebug("AppLayerParse for dcerpc failed.  Returned %" PRId32, r);
         goto end;
     }
 
-    p->flowflags &=~ FLOW_PKT_TOCLIENT;
+    p->flowflags &= ~FLOW_PKT_TOCLIENT;
     p->flowflags |= FLOW_PKT_TOSERVER;
     /* do detect */
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
@@ -1462,15 +1466,14 @@ static int DetectDceStubDataTestParse04(void)
         goto end;
 
     /* response1 */
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOCLIENT, dcerpc_response1,
-                            dcerpc_response1_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOCLIENT, dcerpc_response1,
+            dcerpc_response1_len);
     if (r != 0) {
         SCLogDebug("AppLayerParse for dcerpc failed.  Returned %" PRId32, r);
         goto end;
     }
 
-    p->flowflags &=~ FLOW_PKT_TOSERVER;
+    p->flowflags &= ~FLOW_PKT_TOSERVER;
     p->flowflags |= FLOW_PKT_TOCLIENT;
     /* do detect */
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
@@ -1479,15 +1482,14 @@ static int DetectDceStubDataTestParse04(void)
         goto end;
 
     /* request2 */
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOSERVER, dcerpc_request2,
-                            dcerpc_request2_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOSERVER, dcerpc_request2,
+            dcerpc_request2_len);
     if (r != 0) {
         SCLogDebug("AppLayerParse for dcerpc failed.  Returned %" PRId32, r);
         goto end;
     }
 
-    p->flowflags &=~ FLOW_PKT_TOCLIENT;
+    p->flowflags &= ~FLOW_PKT_TOCLIENT;
     p->flowflags |= FLOW_PKT_TOSERVER;
     /* do detect */
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
@@ -1496,15 +1498,14 @@ static int DetectDceStubDataTestParse04(void)
         goto end;
 
     /* response2 */
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOCLIENT, dcerpc_response2,
-                            dcerpc_response2_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOCLIENT, dcerpc_response2,
+            dcerpc_response2_len);
     if (r != 0) {
         SCLogDebug("AppLayerParse for dcerpc failed.  Returned %" PRId32, r);
         goto end;
     }
 
-    p->flowflags &=~ FLOW_PKT_TOSERVER;
+    p->flowflags &= ~FLOW_PKT_TOSERVER;
     p->flowflags |= FLOW_PKT_TOCLIENT;
     /* do detect */
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
@@ -1512,15 +1513,14 @@ static int DetectDceStubDataTestParse04(void)
     if (PacketAlertCheck(p, 1) || PacketAlertCheck(p, 2) || PacketAlertCheck(p, 3))
         goto end;
     /* request3 */
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOSERVER, dcerpc_request3,
-                            dcerpc_request3_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOSERVER, dcerpc_request3,
+            dcerpc_request3_len);
     if (r != 0) {
         SCLogDebug("AppLayerParse for dcerpc failed.  Returned %" PRId32, r);
         goto end;
     }
 
-    p->flowflags &=~ FLOW_PKT_TOCLIENT;
+    p->flowflags &= ~FLOW_PKT_TOCLIENT;
     p->flowflags |= FLOW_PKT_TOSERVER;
     /* do detect */
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
@@ -1529,15 +1529,14 @@ static int DetectDceStubDataTestParse04(void)
         goto end;
 
     /* response3 */
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOCLIENT | STREAM_EOF, dcerpc_response3,
-                            dcerpc_response3_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOCLIENT | STREAM_EOF,
+            dcerpc_response3, dcerpc_response3_len);
     if (r != 0) {
         SCLogDebug("AppLayerParse for dcerpc failed.  Returned %" PRId32, r);
         goto end;
     }
 
-    p->flowflags &=~ FLOW_PKT_TOSERVER;
+    p->flowflags &= ~FLOW_PKT_TOSERVER;
     p->flowflags |= FLOW_PKT_TOCLIENT;
     /* do detect */
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
@@ -1547,7 +1546,7 @@ static int DetectDceStubDataTestParse04(void)
 
     result = 1;
 
- end:
+end:
     if (alp_tctx != NULL)
         AppLayerParserThreadCtxFree(alp_tctx);
     SigGroupCleanup(de_ctx);
@@ -1576,6 +1575,7 @@ static int DetectDceStubDataTestParse05(void)
     DCERPCState *dcerpc_state = NULL;
     int r = 0;
 
+    // clang-format off
     uint8_t dcerpc_request1[] = {
         0x05, 0x00, 0x00, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x24, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
@@ -1583,7 +1583,9 @@ static int DetectDceStubDataTestParse05(void)
         0x2c, 0xfd, 0xb5, 0x00, 0x40, 0xaa, 0x01, 0x00,
         0x00, 0x00, 0x00, 0x02,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_response1[] = {
         0x05, 0x00, 0x02, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x30, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
@@ -1592,7 +1594,9 @@ static int DetectDceStubDataTestParse05(void)
         0xf0, 0x57, 0xd8, 0x11, 0xb0, 0x05, 0x00, 0x0c,
         0x29, 0x87, 0xea, 0xe9, 0x00, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_request2[] = {
         0x05, 0x00, 0x00, 0x03, 0x10, 0x00, 0x00, 0x00,
         0xa4, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
@@ -1616,7 +1620,9 @@ static int DetectDceStubDataTestParse05(void)
         0x6e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x03, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_response2[] = {
         0x05, 0x00, 0x02, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x30, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
@@ -1625,7 +1631,9 @@ static int DetectDceStubDataTestParse05(void)
         0xf0, 0x57, 0xd8, 0x11, 0xb0, 0x05, 0x00, 0x0c,
         0x29, 0x87, 0xea, 0xe9, 0x00, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_request3[] = {
         0x05, 0x00, 0x00, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x70, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
@@ -1642,13 +1650,16 @@ static int DetectDceStubDataTestParse05(void)
         0x32, 0x00, 0x2e, 0x00, 0x45, 0x00, 0x58, 0x00,
         0x45, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_response3[] = {
         0x05, 0x00, 0x02, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x1c, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
         0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
     uint32_t dcerpc_request1_len = sizeof(dcerpc_request1);
     uint32_t dcerpc_response1_len = sizeof(dcerpc_response1);
@@ -1673,7 +1684,7 @@ static int DetectDceStubDataTestParse05(void)
     p->flow = &f;
     p->flowflags |= FLOW_PKT_TOSERVER;
     p->flowflags |= FLOW_PKT_ESTABLISHED;
-    p->flags |= PKT_HAS_FLOW|PKT_STREAM_EST;
+    p->flags |= PKT_HAS_FLOW | PKT_STREAM_EST;
     f.alproto = ALPROTO_DCERPC;
 
     StreamTcpInitConfig(true);
@@ -1684,25 +1695,22 @@ static int DetectDceStubDataTestParse05(void)
 
     de_ctx->flags |= DE_QUIET;
 
-    s = de_ctx->sig_list = SigInit(de_ctx,
-                                   "alert tcp any any -> any any "
-                                   "(msg:\"DCERPC\"; "
-                                   "dce_stub_data; content:\"|00 02|\"; "
-                                   "sid:1;)");
+    s = de_ctx->sig_list = SigInit(de_ctx, "alert tcp any any -> any any "
+                                           "(msg:\"DCERPC\"; "
+                                           "dce_stub_data; content:\"|00 02|\"; "
+                                           "sid:1;)");
     if (s == NULL)
         goto end;
-    s = de_ctx->sig_list->next = SigInit(de_ctx,
-                                   "alert tcp any any -> any any "
-                                   "(msg:\"DCERPC\"; "
-                                   "dce_stub_data; content:\"|00 75|\"; "
-                                   "sid:2;)");
+    s = de_ctx->sig_list->next = SigInit(de_ctx, "alert tcp any any -> any any "
+                                                 "(msg:\"DCERPC\"; "
+                                                 "dce_stub_data; content:\"|00 75|\"; "
+                                                 "sid:2;)");
     if (s == NULL)
         goto end;
-    s = de_ctx->sig_list->next->next = SigInit(de_ctx,
-                                   "alert tcp any any -> any any "
-                                   "(msg:\"DCERPC\"; "
-                                   "dce_stub_data; content:\"|00 18|\"; "
-                                   "sid:3;)");
+    s = de_ctx->sig_list->next->next = SigInit(de_ctx, "alert tcp any any -> any any "
+                                                       "(msg:\"DCERPC\"; "
+                                                       "dce_stub_data; content:\"|00 18|\"; "
+                                                       "sid:3;)");
     if (s == NULL)
         goto end;
 
@@ -1710,9 +1718,8 @@ static int DetectDceStubDataTestParse05(void)
     DetectEngineThreadCtxInit(&th_v, (void *)de_ctx, (void *)&det_ctx);
 
     /* request1 */
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOSERVER | STREAM_START, dcerpc_request1,
-                            dcerpc_request1_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOSERVER | STREAM_START,
+            dcerpc_request1, dcerpc_request1_len);
     if (r != 0) {
         SCLogDebug("AppLayerParse for dcerpc failed.  Returned %" PRId32, r);
         goto end;
@@ -1724,7 +1731,7 @@ static int DetectDceStubDataTestParse05(void)
         goto end;
     }
 
-    p->flowflags &=~ FLOW_PKT_TOCLIENT;
+    p->flowflags &= ~FLOW_PKT_TOCLIENT;
     p->flowflags |= FLOW_PKT_TOSERVER;
     /* do detect */
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
@@ -1733,15 +1740,14 @@ static int DetectDceStubDataTestParse05(void)
         goto end;
 
     /* response1 */
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOCLIENT, dcerpc_response1,
-                            dcerpc_response1_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOCLIENT, dcerpc_response1,
+            dcerpc_response1_len);
     if (r != 0) {
         SCLogDebug("AppLayerParse for dcerpc failed.  Returned %" PRId32, r);
         goto end;
     }
 
-    p->flowflags &=~ FLOW_PKT_TOSERVER;
+    p->flowflags &= ~FLOW_PKT_TOSERVER;
     p->flowflags |= FLOW_PKT_TOCLIENT;
     /* do detect */
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
@@ -1750,15 +1756,14 @@ static int DetectDceStubDataTestParse05(void)
         goto end;
 
     /* request2 */
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOSERVER, dcerpc_request2,
-                            dcerpc_request2_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOSERVER, dcerpc_request2,
+            dcerpc_request2_len);
     if (r != 0) {
         SCLogDebug("AppLayerParse for dcerpc failed.  Returned %" PRId32, r);
         goto end;
     }
 
-    p->flowflags &=~ FLOW_PKT_TOCLIENT;
+    p->flowflags &= ~FLOW_PKT_TOCLIENT;
     p->flowflags |= FLOW_PKT_TOSERVER;
     /* do detect */
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
@@ -1767,15 +1772,14 @@ static int DetectDceStubDataTestParse05(void)
         goto end;
 
     /* response2 */
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOCLIENT, dcerpc_response2,
-                            dcerpc_response2_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOCLIENT, dcerpc_response2,
+            dcerpc_response2_len);
     if (r != 0) {
         SCLogDebug("AppLayerParse for dcerpc failed.  Returned %" PRId32, r);
         goto end;
     }
 
-    p->flowflags &=~ FLOW_PKT_TOSERVER;
+    p->flowflags &= ~FLOW_PKT_TOSERVER;
     p->flowflags |= FLOW_PKT_TOCLIENT;
     /* do detect */
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
@@ -1784,15 +1788,14 @@ static int DetectDceStubDataTestParse05(void)
         goto end;
 
     /* request3 */
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOSERVER, dcerpc_request3,
-                            dcerpc_request3_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOSERVER, dcerpc_request3,
+            dcerpc_request3_len);
     if (r != 0) {
         SCLogDebug("AppLayerParse for dcerpc failed.  Returned %" PRId32, r);
         goto end;
     }
 
-    p->flowflags &=~ FLOW_PKT_TOCLIENT;
+    p->flowflags &= ~FLOW_PKT_TOCLIENT;
     p->flowflags |= FLOW_PKT_TOSERVER;
     /* do detect */
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
@@ -1801,15 +1804,14 @@ static int DetectDceStubDataTestParse05(void)
         goto end;
 
     /* response3 */
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC,
-                            STREAM_TOCLIENT | STREAM_EOF, dcerpc_response3,
-                            dcerpc_response3_len);
+    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_DCERPC, STREAM_TOCLIENT | STREAM_EOF,
+            dcerpc_response3, dcerpc_response3_len);
     if (r != 0) {
         SCLogDebug("AppLayerParse for dcerpc failed.  Returned %" PRId32, r);
         goto end;
     }
 
-    p->flowflags &=~ FLOW_PKT_TOSERVER;
+    p->flowflags &= ~FLOW_PKT_TOSERVER;
     p->flowflags |= FLOW_PKT_TOCLIENT;
     /* do detect */
     SigMatchSignatures(&th_v, de_ctx, det_ctx, p);
@@ -1819,7 +1821,7 @@ static int DetectDceStubDataTestParse05(void)
 
     result = 1;
 
- end:
+end:
     if (alp_tctx != NULL)
         AppLayerParserThreadCtxFree(alp_tctx);
 
@@ -1842,8 +1844,8 @@ static int DetectDceStubDataTestParse06(void)
     DetectEngineCtx *de_ctx = DetectEngineCtxInit();
     FAIL_IF_NULL(de_ctx);
     de_ctx->flags = DE_QUIET;
-    Signature *s = DetectEngineAppendSig(de_ctx,
-            "alert dns any any -> any any dce_stub_data;content:\"0\";");
+    Signature *s = DetectEngineAppendSig(
+            de_ctx, "alert dns any any -> any any dce_stub_data;content:\"0\";");
     FAIL_IF_NOT_NULL(s);
     DetectEngineCtxFree(de_ctx);
     PASS;
@@ -1851,15 +1853,10 @@ static int DetectDceStubDataTestParse06(void)
 
 static void DetectDceStubDataRegisterTests(void)
 {
-    UtRegisterTest("DetectDceStubDataTestParse02",
-                   DetectDceStubDataTestParse02);
-    UtRegisterTest("DetectDceStubDataTestParse03",
-                   DetectDceStubDataTestParse03);
-    UtRegisterTest("DetectDceStubDataTestParse04",
-                   DetectDceStubDataTestParse04);
-    UtRegisterTest("DetectDceStubDataTestParse05",
-                   DetectDceStubDataTestParse05);
-    UtRegisterTest("DetectDceStubDataTestParse06",
-                   DetectDceStubDataTestParse06);
+    UtRegisterTest("DetectDceStubDataTestParse02", DetectDceStubDataTestParse02);
+    UtRegisterTest("DetectDceStubDataTestParse03", DetectDceStubDataTestParse03);
+    UtRegisterTest("DetectDceStubDataTestParse04", DetectDceStubDataTestParse04);
+    UtRegisterTest("DetectDceStubDataTestParse05", DetectDceStubDataTestParse05);
+    UtRegisterTest("DetectDceStubDataTestParse06", DetectDceStubDataTestParse06);
 }
 #endif

@@ -28,7 +28,7 @@ likely happen once per transaction, by the time of its completion. In other case
 
 In ``OutputTxLog``, the engine will compare current state with the value defined for the logging to happen, per flow
 direction (``logger->tc_log_progress``, ``logger->ts_log_progress``). If state is less than that value, the engine skips to
-the next logger. Code snippet from: suricata/src/output-tx.c:
+the next logger. Code snippet from: suricata/src/output/output-tx.c:
 
 .. code-block:: c
 
@@ -144,7 +144,7 @@ Code snippet from: rust/src/ssh/ssh.rs:
         SshStateFinished = 3,
     }
 
-From src/app-layer-ftp.h:
+From src/app-layer/ftp/parser.h:
 
 .. code-block:: c
 
@@ -154,7 +154,7 @@ From src/app-layer-ftp.h:
         FTP_STATE_FINISHED,
     };
 
-From src/app-layer-ssl.h:
+From src/app-layer/ssl/parser.h:
 
 .. code-block:: c
 
@@ -218,7 +218,7 @@ src/app-layer-dcerpc.c:
 
     AppLayerParserRegisterStateProgressCompletionStatus(ALPROTO_DCERPC, 1, 1);
 
-src/app-layer-ftp.c:
+src/app-layer/ftp/parser.c:
 
 .. code-block:: c
 

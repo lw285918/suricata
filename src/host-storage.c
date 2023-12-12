@@ -25,7 +25,7 @@
 
 #include "suricata-common.h"
 #include "host-storage.h"
-#include "util-unittest.h"
+#include "util/unittest.h"
 
 unsigned int HostStorageSize(void)
 {
@@ -111,7 +111,6 @@ void HostFreeStorage(Host *h)
     if (HostStorageSize() > 0)
         StorageFreeAll(h->storage, STORAGE_HOST);
 }
-
 
 #ifdef UNITTESTS
 

@@ -29,8 +29,8 @@
 #include "flow-storage.h"
 #include "flow-hash.h"
 #include "flow-util.h"
-#include "util-storage.h"
-#include "util-unittest.h"
+#include "util/storage.h"
+#include "util/unittest.h"
 
 unsigned int FlowStorageSize(void)
 {
@@ -199,7 +199,6 @@ static int FlowStorageTest02(void)
     if (ptr1a != ptr1b) {
         goto error;
     }
-
 
     FlowClearMemory(f, 0);
     FlowFree(f);

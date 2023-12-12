@@ -29,10 +29,10 @@
 
 #include "detect-parse.h"
 #include "detect-engine.h"
-#include "detect-engine-mpm.h"
-#include "detect-engine-prefilter.h"
+#include "detect/engine/mpm.h"
+#include "detect/engine/prefilter.h"
 #include "detect-content.h"
-#include "detect-engine-content-inspection.h"
+#include "detect/engine/content-inspection.h"
 #include "detect-frame.h"
 
 #include "flow.h"
@@ -42,10 +42,10 @@
 #include "conf.h"
 #include "conf-yaml-loader.h"
 
-#include "util-debug.h"
-#include "util-unittest.h"
-#include "util-spm.h"
-#include "util-print.h"
+#include "util/debug.h"
+#include "util/unittest.h"
+#include "util/spm.h"
+#include "util/print.h"
 
 static int DetectFrameSetup(DetectEngineCtx *, Signature *, const char *);
 

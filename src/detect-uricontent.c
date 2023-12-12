@@ -28,12 +28,12 @@
 #include "decode.h"
 #include "detect.h"
 #include "detect-content.h"
-#include "detect-http-uri.h"
+#include "app-layer/http/detect-uri.h"
 #include "detect-uricontent.h"
-#include "detect-engine-mpm.h"
+#include "detect/engine/mpm.h"
 #include "detect-parse.h"
 #include "detect-engine.h"
-#include "detect-engine-state.h"
+#include "detect/engine/state.h"
 #include "flow.h"
 #include "detect-flow.h"
 #include "flow-var.h"
@@ -45,14 +45,14 @@
 #include "app-layer.h"
 #include "app-layer-parser.h"
 #include "app-layer-protos.h"
-#include "app-layer-htp.h"
+#include "app-layer/http/parser.h"
 
-#include "util-mpm.h"
-#include "util-print.h"
-#include "util-debug.h"
-#include "util-unittest.h"
-#include "util-unittest-helper.h"
-#include "util-spm.h"
+#include "util/mpm/mpm.h"
+#include "util/print.h"
+#include "util/debug.h"
+#include "util/unittest.h"
+#include "util/unittest-helper.h"
+#include "util/spm.h"
 #include "conf.h"
 
 /* prototypes */
@@ -64,7 +64,7 @@ static int g_http_uri_buffer_id = 0;
 /**
  * \brief Registration function for uricontent: keyword
  */
-void DetectUricontentRegister (void)
+void DetectUricontentRegister(void)
 {
     sigmatch_table[DETECT_URICONTENT].name = "uricontent";
     sigmatch_table[DETECT_URICONTENT].desc = "legacy keyword to match on the request URI buffer";
@@ -72,7 +72,8 @@ void DetectUricontentRegister (void)
     sigmatch_table[DETECT_URICONTENT].Match = NULL;
     sigmatch_table[DETECT_URICONTENT].Setup = DetectUricontentSetup;
     sigmatch_table[DETECT_URICONTENT].Free = DetectUricontentFree;
-    sigmatch_table[DETECT_URICONTENT].flags = (SIGMATCH_QUOTES_MANDATORY|SIGMATCH_HANDLE_NEGATION);
+    sigmatch_table[DETECT_URICONTENT].flags =
+            (SIGMATCH_QUOTES_MANDATORY | SIGMATCH_HANDLE_NEGATION);
     sigmatch_table[DETECT_URICONTENT].alternative = DETECT_HTTP_URI;
 
     g_http_uri_buffer_id = DetectBufferTypeRegister("http_uri");

@@ -37,8 +37,8 @@
 #include "respond-reject.h"
 #include "respond-reject-libnet11.h"
 
-#include "util-debug.h"
-#include "util-privs.h"
+#include "util/debug.h"
+#include "util/privs.h"
 
 int RejectSendIPv4TCP(ThreadVars *, Packet *, void *);
 int RejectSendIPv4ICMP(ThreadVars *, Packet *, void *);
@@ -47,7 +47,7 @@ int RejectSendIPv6ICMP(ThreadVars *, Packet *, void *);
 static TmEcode RespondRejectFunc(ThreadVars *tv, Packet *p, void *data);
 static TmEcode RespondRejectThreadDeinit(ThreadVars *tv, void *data);
 
-void TmModuleRespondRejectRegister (void)
+void TmModuleRespondRejectRegister(void)
 {
     tmm_modules[TMM_RESPONDREJECT].name = "RespondReject";
     tmm_modules[TMM_RESPONDREJECT].ThreadInit = NULL;

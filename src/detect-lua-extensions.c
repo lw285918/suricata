@@ -34,19 +34,19 @@
 #include "detect-flowvar.h"
 
 #include "detect-engine.h"
-#include "detect-engine-mpm.h"
-#include "detect-engine-state.h"
+#include "detect/engine/mpm.h"
+#include "detect/engine/state.h"
 
 #include "flow.h"
 #include "flow-var.h"
 #include "flow-util.h"
 
-#include "util-debug.h"
-#include "util-spm-bm.h"
-#include "util-print.h"
+#include "util/debug.h"
+#include "util/spm-bm.h"
+#include "util/print.h"
 
-#include "util-unittest.h"
-#include "util-unittest-helper.h"
+#include "util/unittest.h"
+#include "util/unittest-helper.h"
 
 #include "app-layer.h"
 
@@ -55,22 +55,22 @@
 #include "detect-lua.h"
 
 #include "queue.h"
-#include "util-cpu.h"
+#include "util/cpu.h"
 
 #include "app-layer-parser.h"
 
 #ifdef HAVE_LUA
 
-#include "util-lua.h"
-#include "util-lua-common.h"
-#include "util-lua-http.h"
-#include "util-lua-dns.h"
-#include "util-lua-ja3.h"
-#include "util-lua-tls.h"
-#include "util-lua-ssh.h"
-#include "util-lua-hassh.h"
-#include "util-lua-smtp.h"
-#include "util-lua-dnp3.h"
+#include "util/lua/lua.h"
+#include "util/lua/lua-common.h"
+#include "app-layer/http/lua.h"
+#include "app-layer/dns/lua.h"
+#include "util/lua/lua-ja3.h"
+#include "app-layer/tls/lua.h"
+#include "app-layer/ssh/lua.h"
+#include "app-layer/ssh/lua-hassh.h"
+#include "app-layer/smtp/lua.h"
+#include "app-layer/dnp3/lua.h"
 #include "detect-lua-extensions.h"
 
 static const char luaext_key_ld[] = "suricata:luadata";
@@ -78,8 +78,8 @@ static const char luaext_key_ld[] = "suricata:luadata";
 /* hack to please scan-build. Even though LuaCallbackError *always*
  * returns 2, scan-build doesn't accept it and generates false
  * positives */
-#define LUA_ERROR(msg)                  \
-    LuaCallbackError(luastate, (msg));  \
+#define LUA_ERROR(msg)                                                                             \
+    LuaCallbackError(luastate, (msg));                                                             \
     return 2
 
 static int GetLuaData(lua_State *luastate, DetectLuaData **ret_ld)
@@ -107,8 +107,8 @@ static int GetFlow(lua_State *luastate, Flow **ret_f)
     return 0;
 }
 
-static int GetFlowVarById(lua_State *luastate, Flow *f,
-        FlowVar **ret_fv, bool fv_may_be_null, uint32_t *ret_idx)
+static int GetFlowVarById(
+        lua_State *luastate, Flow *f, FlowVar **ret_fv, bool fv_may_be_null, uint32_t *ret_idx)
 {
     DetectLuaData *ld = NULL;
     if (ret_idx)
@@ -168,8 +168,8 @@ static int GetFlowVarByKey(lua_State *luastate, Flow *f, FlowVar **ret_fv)
     return 0;
 }
 
-static int GetFlowIntById(lua_State *luastate, Flow *f,
-        FlowVar **ret_fv, bool fv_may_be_null, uint32_t *ret_idx)
+static int GetFlowIntById(
+        lua_State *luastate, Flow *f, FlowVar **ret_fv, bool fv_may_be_null, uint32_t *ret_idx)
 {
     DetectLuaData *ld = NULL;
     if (ret_idx)
@@ -225,9 +225,8 @@ static int LuaGetFlowvar(lua_State *luastate)
         LUA_ERROR("invalid data type as first argument");
     }
 
-    LuaPushStringBuffer(luastate,
-            (const uint8_t *)fv->data.fv_str.value,
-            (size_t)fv->data.fv_str.value_len);
+    LuaPushStringBuffer(
+            luastate, (const uint8_t *)fv->data.fv_str.value, (size_t)fv->data.fv_str.value_len);
     return 1;
 }
 
@@ -265,7 +264,7 @@ static int LuaSetFlowvarById(lua_State *luastate)
         LUA_ERROR("len out of range: max 64k");
     }
 
-    buffer = SCMalloc(len+1);
+    buffer = SCMalloc(len + 1);
     if (unlikely(buffer == NULL)) {
         LUA_ERROR("out of memory");
     }
@@ -319,14 +318,14 @@ static int LuaSetFlowvarByKey(lua_State *luastate)
         LUA_ERROR("len out of range: max 64k");
     }
 
-    buffer = SCMalloc(len+1);
+    buffer = SCMalloc(len + 1);
     if (unlikely(buffer == NULL)) {
         LUA_ERROR("out of memory");
     }
     memcpy(buffer, str, len);
     buffer[len] = '\0';
 
-    uint8_t *keybuf = SCMalloc(keylen+1);
+    uint8_t *keybuf = SCMalloc(keylen + 1);
     if (unlikely(keybuf == NULL)) {
         SCFree(buffer);
         LUA_ERROR("out of memory");
@@ -367,7 +366,6 @@ static int LuaGetFlowint(lua_State *luastate)
     /* return value through luastate, as a luanumber */
     lua_pushnumber(luastate, (lua_Number)number);
     return 1;
-
 }
 
 static int LuaSetFlowint(lua_State *luastate)
@@ -401,7 +399,7 @@ static int LuaSetFlowint(lua_State *luastate)
     lua_Number luanumber = lua_tonumber(luastate, 2);
     if (luanumber < 0 || id > (double)UINT_MAX) {
         LUA_ERROR("value out of range, "
-                "value must be unsigned 32bit int");
+                  "value must be unsigned 32bit int");
     }
     uint32_t number = (uint32_t)luanumber;
 
@@ -445,7 +443,6 @@ static int LuaIncrFlowint(lua_State *luastate)
     lua_pushnumber(luastate, (lua_Number)number);
     SCLogDebug("incremented flow:%p idx:%u value:%u", f, idx, number);
     return 1;
-
 }
 
 static int LuaDecrFlowint(lua_State *luastate)
@@ -477,7 +474,6 @@ static int LuaDecrFlowint(lua_State *luastate)
     lua_pushnumber(luastate, (lua_Number)number);
     SCLogDebug("decremented flow:%p idx:%u value:%u", f, idx, number);
     return 1;
-
 }
 
 static int LuaGetByteVar(lua_State *luastate)

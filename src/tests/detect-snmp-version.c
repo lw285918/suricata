@@ -15,8 +15,8 @@
  * 02110-1301, USA.
  */
 
-#include "util-unittest.h"
-#include "util-unittest-helper.h"
+#include "util/unittest.h"
+#include "util/unittest-helper.h"
 
 /**
  * \test This is a test for a valid value 2.
@@ -24,7 +24,7 @@
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int SNMPValidityTestParse01 (void)
+static int SNMPValidityTestParse01(void)
 {
     DetectU32Data *dd = NULL;
     dd = DetectSNMPVersionParse("2");
@@ -40,7 +40,7 @@ static int SNMPValidityTestParse01 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int SNMPValidityTestParse02 (void)
+static int SNMPValidityTestParse02(void)
 {
     DetectU32Data *dd = NULL;
     dd = DetectSNMPVersionParse(">2");

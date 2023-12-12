@@ -25,8 +25,8 @@
 
 #include "suricata-common.h"
 #include "device-storage.h"
-#include "util-storage.h"
-#include "util-unittest.h"
+#include "util/storage.h"
+#include "util/unittest.h"
 
 unsigned int LiveDevStorageSize(void)
 {
@@ -112,5 +112,3 @@ void LiveDevFreeStorage(LiveDevice *d)
     if (LiveDevStorageSize() > 0)
         StorageFreeAll(d->storage, STORAGE_DEVICE);
 }
-
-

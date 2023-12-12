@@ -29,8 +29,8 @@
 #include "detect-parse.h"
 
 #include "detect-engine.h"
-#include "detect-engine-mpm.h"
-#include "detect-engine-state.h"
+#include "detect/engine/mpm.h"
+#include "detect/engine/state.h"
 #include "detect-engine-build.h"
 #include "detect-dce-iface.h"
 
@@ -42,20 +42,21 @@
 #include "queue.h"
 #include "stream-tcp-reassemble.h"
 
-#include "util-debug.h"
-#include "util-unittest.h"
-#include "util-unittest-helper.h"
+#include "util/debug.h"
+#include "util/unittest.h"
+#include "util/unittest-helper.h"
 #include "stream-tcp.h"
 
 #include "rust.h"
 
-#define PARSE_REGEX "^\\s*([0-9a-zA-Z]{8}-[0-9a-zA-Z]{4}-[0-9a-zA-Z]{4}-[0-9a-zA-Z]{4}-[0-9a-zA-Z]{12})(?:\\s*,\\s*(<|>|=|!)([0-9]{1,5}))?(?:\\s*,\\s*(any_frag))?\\s*$"
+#define PARSE_REGEX                                                                                \
+    "^\\s*([0-9a-zA-Z]{8}-[0-9a-zA-Z]{4}-[0-9a-zA-Z]{4}-[0-9a-zA-Z]{4}-[0-9a-zA-Z]{12})(?:\\s*,"   \
+    "\\s*(<|>|=|!)([0-9]{1,5}))?(?:\\s*,\\s*(any_frag))?\\s*$"
 
 static DetectParseRegex parse_regex;
 
-static int DetectDceIfaceMatchRust(DetectEngineThreadCtx *det_ctx,
-        Flow *f, uint8_t flags, void *state, void *txv,
-        const Signature *s, const SigMatchCtx *m);
+static int DetectDceIfaceMatchRust(DetectEngineThreadCtx *det_ctx, Flow *f, uint8_t flags,
+        void *state, void *txv, const Signature *s, const SigMatchCtx *m);
 static int DetectDceIfaceSetup(DetectEngineCtx *, Signature *, const char *);
 static void DetectDceIfaceFree(DetectEngineCtx *, void *);
 #ifdef UNITTESTS
@@ -72,7 +73,7 @@ void DetectDceIfaceRegister(void)
     sigmatch_table[DETECT_DCE_IFACE].alias = "dce_iface";
     sigmatch_table[DETECT_DCE_IFACE].AppLayerTxMatch = DetectDceIfaceMatchRust;
     sigmatch_table[DETECT_DCE_IFACE].Setup = DetectDceIfaceSetup;
-    sigmatch_table[DETECT_DCE_IFACE].Free  = DetectDceIfaceFree;
+    sigmatch_table[DETECT_DCE_IFACE].Free = DetectDceIfaceFree;
 #ifdef UNITTESTS
     sigmatch_table[DETECT_DCE_IFACE].RegisterTests = DetectDceIfaceRegisterTests;
 #endif
@@ -105,9 +106,8 @@ void DetectDceIfaceRegister(void)
  * \retval 1 On Match.
  * \retval 0 On no match.
  */
-static int DetectDceIfaceMatchRust(DetectEngineThreadCtx *det_ctx,
-        Flow *f, uint8_t flags, void *state, void *txv,
-        const Signature *s, const SigMatchCtx *m)
+static int DetectDceIfaceMatchRust(DetectEngineThreadCtx *det_ctx, Flow *f, uint8_t flags,
+        void *state, void *txv, const Signature *s, const SigMatchCtx *m)
 {
     SCEnter();
 
@@ -194,6 +194,7 @@ static int DetectDceIfaceTestParse13(void)
     DCERPCState *dcerpc_state = NULL;
     int r = 0;
 
+    // clang-format off
     uint8_t dcerpc_bind[] = {
         0x05, 0x00, 0x0b, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x48, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
@@ -205,7 +206,9 @@ static int DetectDceIfaceTestParse13(void)
         0xeb, 0x1c, 0xc9, 0x11, 0x9f, 0xe8, 0x08, 0x00,
         0x2b, 0x10, 0x48, 0x60, 0x02, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_bindack[] = {
         0x05, 0x00, 0x0c, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x44, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
@@ -217,7 +220,9 @@ static int DetectDceIfaceTestParse13(void)
         0x9f, 0xe8, 0x08, 0x00, 0x2b, 0x10, 0x48, 0x60,
         0x02, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_request1[] = {
         0x05, 0x00, 0x00, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x24, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
@@ -225,7 +230,9 @@ static int DetectDceIfaceTestParse13(void)
         0x2c, 0xfd, 0xb5, 0x00, 0x40, 0xaa, 0x01, 0x00,
         0x00, 0x00, 0x00, 0x02,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_response1[] = {
         0x05, 0x00, 0x02, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x30, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
@@ -234,7 +241,9 @@ static int DetectDceIfaceTestParse13(void)
         0xf0, 0x57, 0xd8, 0x11, 0xb0, 0x05, 0x00, 0x0c,
         0x29, 0x87, 0xea, 0xe9, 0x00, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_request2[] = {
         0x05, 0x00, 0x00, 0x03, 0x10, 0x00, 0x00, 0x00,
         0xa4, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
@@ -258,7 +267,9 @@ static int DetectDceIfaceTestParse13(void)
         0x6e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x03, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_response2[] = {
         0x05, 0x00, 0x02, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x30, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
@@ -267,7 +278,9 @@ static int DetectDceIfaceTestParse13(void)
         0xf0, 0x57, 0xd8, 0x11, 0xb0, 0x05, 0x00, 0x0c,
         0x29, 0x87, 0xea, 0xe9, 0x00, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_request3[] = {
         0x05, 0x00, 0x00, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x70, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
@@ -284,13 +297,16 @@ static int DetectDceIfaceTestParse13(void)
         0x32, 0x00, 0x2e, 0x00, 0x45, 0x00, 0x58, 0x00,
         0x45, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
+    // clang-format off
     uint8_t dcerpc_response3[] = {
         0x05, 0x00, 0x02, 0x03, 0x10, 0x00, 0x00, 0x00,
         0x1c, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
         0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00,
     };
+    // clang-format on
 
     uint32_t dcerpc_bind_len = sizeof(dcerpc_bind);
     uint32_t dcerpc_bindack_len = sizeof(dcerpc_bindack);

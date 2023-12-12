@@ -18,7 +18,7 @@
 #ifndef __RUST_H__
 #define __RUST_H__
 
-#include "util-file.h"
+#include "util/file.h"
 
 // hack for include orders cf SCSha256
 typedef struct HttpRangeContainerBlock HttpRangeContainerBlock;
@@ -26,7 +26,7 @@ typedef struct HttpRangeContainerBlock HttpRangeContainerBlock;
 #include "rust-bindings.h"
 
 #define JB_SET_STRING(jb, key, val) jb_set_formatted((jb), "\"" key "\":\"" val "\"")
-#define JB_SET_TRUE(jb, key) jb_set_formatted((jb), "\"" key "\":true")
-#define JB_SET_FALSE(jb, key) jb_set_formatted((jb), "\"" key "\":false")
+#define JB_SET_TRUE(jb, key)        jb_set_formatted((jb), "\"" key "\":true")
+#define JB_SET_FALSE(jb, key)       jb_set_formatted((jb), "\"" key "\":false")
 
 #endif /* !__RUST_H__ */

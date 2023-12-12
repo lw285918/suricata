@@ -20,16 +20,16 @@
 
 #include "flow.h"
 #include "detect.h"
-#include "detect-engine-state.h" //DetectEngineState
+#include "detect/engine/state.h" //DetectEngineState
 
-#include "app-layer-krb5.h" //KRB5State, KRB5Transaction
-#include "app-layer-ike.h"  //IKEState, IKETransaction
-#include "app-layer-ntp.h" //NTPState, NTPTransaction
-#include "app-layer-snmp.h" //SNMPState, SNMPTransaction
-#include "app-layer-tftp.h" //TFTPState, TFTPTransaction
+#include "app-layer/krb5/parser.h" //KRB5State, KRB5Transaction
+#include "app-layer/ike/parser.h"  //IKEState, IKETransaction
+#include "app-layer/ntp/parser.h"  //NTPState, NTPTransaction
+#include "app-layer/snmp/parser.h" //SNMPState, SNMPTransaction
+#include "app-layer/tftp/parser.h" //TFTPState, TFTPTransaction
 
-#include "util-debug.h"
-#include "util-file.h"
+#include "util/debug.h"
+#include "util/file.h"
 
 // hack for include orders cf SCSha256
 typedef struct HttpRangeContainerBlock HttpRangeContainerBlock;
@@ -40,8 +40,7 @@ typedef struct SuricataContext_ {
     SCError (*SCLogMessage)(const SCLogLevel, const char *, const unsigned int, const char *,
             const char *, const char *message);
     void (*DetectEngineStateFree)(DetectEngineState *);
-    void (*AppLayerDecoderEventsSetEventRaw)(AppLayerDecoderEvents **,
-            uint8_t);
+    void (*AppLayerDecoderEventsSetEventRaw)(AppLayerDecoderEvents **, uint8_t);
     void (*AppLayerDecoderEventsFreeEvents)(AppLayerDecoderEvents **);
     void (*AppLayerParserTriggerRawStreamReassembly)(Flow *, int direction);
 
@@ -49,9 +48,9 @@ typedef struct SuricataContext_ {
     bool (*HTPFileCloseHandleRange)(const StreamingBufferConfig *sbcfg, FileContainer *,
             const uint16_t, HttpRangeContainerBlock *, const uint8_t *, uint32_t);
 
-    int (*FileOpenFileWithId)(FileContainer *, const StreamingBufferConfig *,
-        uint32_t track_id, const uint8_t *name, uint16_t name_len,
-        const uint8_t *data, uint32_t data_len, uint16_t flags);
+    int (*FileOpenFileWithId)(FileContainer *, const StreamingBufferConfig *, uint32_t track_id,
+            const uint8_t *name, uint16_t name_len, const uint8_t *data, uint32_t data_len,
+            uint16_t flags);
     int (*FileCloseFileById)(FileContainer *, const StreamingBufferConfig *, uint32_t track_id,
             const uint8_t *data, uint32_t data_len, uint16_t flags);
     int (*FileAppendDataById)(FileContainer *, const StreamingBufferConfig *, uint32_t track_id,

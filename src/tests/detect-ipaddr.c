@@ -19,11 +19,11 @@
 
 #include "../detect.h"
 #include "../detect-parse.h"
-#include "../detect-engine-prefilter-common.h"
+#include "../detect/engine/prefilter-common.h"
 
 #include "../detect-ipaddr.h"
 
-#include "../util-unittest.h"
+#include "../util/unittest.h"
 
 static int DetectIPAddrParseTest01(void)
 {

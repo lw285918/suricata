@@ -24,10 +24,10 @@
 #ifndef __DETECT_DSIZE_H__
 #define __DETECT_DSIZE_H__
 
-#include "detect-engine-uint.h"
+#include "detect/engine/uint.h"
 
 /* prototypes */
-void DetectDsizeRegister (void);
+void DetectDsizeRegister(void);
 
 int SigParseMaxRequiredDsize(const Signature *s);
 int SigParseGetMaxDsize(const Signature *s);
@@ -51,4 +51,3 @@ static inline bool SigDsizePrefilter(const Packet *p, const Signature *s, uint32
 }
 
 #endif /* __DETECT_DSIZE_H__ */
-

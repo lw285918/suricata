@@ -32,9 +32,9 @@
 #include "detect-parse.h"
 
 #include "detect-engine.h"
-#include "detect-engine-mpm.h"
-#include "detect-engine-state.h"
-#include "detect-engine-sigorder.h"
+#include "detect/engine/mpm.h"
+#include "detect/engine/state.h"
+#include "detect/engine/sigorder.h"
 #include "detect-bypass.h"
 
 #include "flow.h"
@@ -43,14 +43,14 @@
 
 #include "stream-tcp.h"
 
-#include "util-debug.h"
-#include "util-spm-bm.h"
-#include "util-unittest.h"
-#include "util-unittest-helper.h"
-#include "util-device.h"
+#include "util/debug.h"
+#include "util/spm-bm.h"
+#include "util/unittest.h"
+#include "util/unittest-helper.h"
+#include "util/device.h"
 
-static int DetectBypassMatch(DetectEngineThreadCtx *, Packet *,
-        const Signature *, const SigMatchCtx *);
+static int DetectBypassMatch(
+        DetectEngineThreadCtx *, Packet *, const Signature *, const SigMatchCtx *);
 static int DetectBypassSetup(DetectEngineCtx *, Signature *, const char *);
 
 /**
@@ -59,11 +59,12 @@ static int DetectBypassSetup(DetectEngineCtx *, Signature *, const char *);
 void DetectBypassRegister(void)
 {
     sigmatch_table[DETECT_BYPASS].name = "bypass";
-    sigmatch_table[DETECT_BYPASS].desc = "call the bypass callback when the match of a sig is complete";
+    sigmatch_table[DETECT_BYPASS].desc =
+            "call the bypass callback when the match of a sig is complete";
     sigmatch_table[DETECT_BYPASS].url = "/rules/bypass-keyword.html";
     sigmatch_table[DETECT_BYPASS].Match = DetectBypassMatch;
     sigmatch_table[DETECT_BYPASS].Setup = DetectBypassSetup;
-    sigmatch_table[DETECT_BYPASS].Free  = NULL;
+    sigmatch_table[DETECT_BYPASS].Free = NULL;
     sigmatch_table[DETECT_BYPASS].flags = SIGMATCH_NOOPT;
 }
 
@@ -83,8 +84,8 @@ static int DetectBypassSetup(DetectEngineCtx *de_ctx, Signature *s, const char *
     return 0;
 }
 
-static int DetectBypassMatch(DetectEngineThreadCtx *det_ctx, Packet *p,
-        const Signature *s, const SigMatchCtx *ctx)
+static int DetectBypassMatch(
+        DetectEngineThreadCtx *det_ctx, Packet *p, const Signature *s, const SigMatchCtx *ctx)
 {
     PacketBypassCallback(p);
 

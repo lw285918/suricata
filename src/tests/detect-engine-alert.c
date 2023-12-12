@@ -19,11 +19,11 @@
 
 #include "../detect.h"
 #include "../detect-engine.h"
-#include "../detect-engine-alert.h"
+#include "../detect/engine/alert.h"
 #include "../detect-parse.h"
 
-#include "../util-unittest.h"
-#include "../util-unittest-helper.h"
+#include "../util/unittest.h"
+#include "../util/unittest-helper.h"
 
 /**
  * \brief Tests that the reject action is correctly set in Packet->action

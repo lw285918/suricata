@@ -25,12 +25,12 @@
 #define __FLOW_BIT_H__
 
 #include "flow.h"
-#include "util-var.h"
+#include "util/var.h"
 
 typedef struct FlowBit_ {
     uint8_t type; /* type, DETECT_FLOWBITS in this case */
     uint8_t pad[3];
-    uint32_t idx; /* name idx */
+    uint32_t idx;     /* name idx */
     GenericVar *next; /* right now just implement this as a list,
                        * in the long run we have think of something
                        * faster. */
@@ -45,4 +45,3 @@ void FlowBitToggle(Flow *, uint32_t);
 int FlowBitIsset(Flow *, uint32_t);
 int FlowBitIsnotset(Flow *, uint32_t);
 #endif /* __FLOW_BIT_H__ */
-

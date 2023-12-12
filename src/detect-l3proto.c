@@ -32,19 +32,19 @@
 
 #include "detect-parse.h"
 #include "detect-engine.h"
-#include "detect-engine-mpm.h"
+#include "detect/engine/mpm.h"
 #include "detect-engine-build.h"
 
-#include "detect-engine-siggroup.h"
-#include "detect-engine-address.h"
+#include "detect/engine/siggroup.h"
+#include "detect/engine/address.h"
 
 #include "detect-l3proto.h"
 
-#include "util-byte.h"
-#include "util-unittest.h"
-#include "util-unittest-helper.h"
+#include "util/byte.h"
+#include "util/unittest.h"
+#include "util/unittest-helper.h"
 
-#include "util-debug.h"
+#include "util/debug.h"
 
 static int DetectL3ProtoSetup(DetectEngineCtx *, Signature *, const char *);
 #ifdef UNITTESTS
@@ -56,7 +56,7 @@ void DetectL3ProtoRegister(void)
     sigmatch_table[DETECT_L3PROTO].name = "l3_proto";
     sigmatch_table[DETECT_L3PROTO].Match = NULL;
     sigmatch_table[DETECT_L3PROTO].Setup = DetectL3ProtoSetup;
-    sigmatch_table[DETECT_L3PROTO].Free  = NULL;
+    sigmatch_table[DETECT_L3PROTO].Free = NULL;
 #ifdef UNITTESTS
     sigmatch_table[DETECT_L3PROTO].RegisterTests = DetectL3protoRegisterTests;
 #endif
@@ -81,16 +81,14 @@ static int DetectL3ProtoSetup(DetectEngineCtx *de_ctx, Signature *s, const char 
     }
 
     /* authorized value, ip, any, ip4, ipv4, ip6, ipv6 */
-    if (strcasecmp(str,"ipv4") == 0 ||
-            strcasecmp(str,"ip4") == 0 ) {
+    if (strcasecmp(str, "ipv4") == 0 || strcasecmp(str, "ip4") == 0) {
         if (s->proto.flags & DETECT_PROTO_IPV6) {
             SCLogError("Conflicting l3 proto specified");
             goto error;
         }
         s->proto.flags |= DETECT_PROTO_IPV4;
         SCLogDebug("IPv4 protocol detected");
-    } else if (strcasecmp(str,"ipv6") == 0 ||
-            strcasecmp(str,"ip6") == 0 ) {
+    } else if (strcasecmp(str, "ipv6") == 0 || strcasecmp(str, "ip6") == 0) {
         if (s->proto.flags & DETECT_PROTO_IPV6) {
             SCLogError("Conflicting l3 proto specified");
             goto error;
@@ -108,7 +106,7 @@ error:
 }
 
 #ifdef UNITTESTS
-#include "detect-engine-alert.h"
+#include "detect/engine/alert.h"
 
 /**
  * \test DetectL3protoTestSig01 is a test for checking the working of ttl keyword

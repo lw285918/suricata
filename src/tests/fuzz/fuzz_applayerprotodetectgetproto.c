@@ -4,18 +4,17 @@
  * fuzz target for AppLayerProtoDetectGetProto
  */
 
-
 #include "suricata-common.h"
 #include "suricata.h"
 #include "app-layer-detect-proto.h"
 #include "flow-util.h"
 #include "app-layer-parser.h"
-#include "util-unittest-helper.h"
+#include "util/unittest-helper.h"
 #include "conf-yaml-loader.h"
 
 #define HEADER_LEN 6
 
-//rule of thumb constant, so as not to timeout target
+// rule of thumb constant, so as not to timeout target
 #define PROTO_DETECT_MAX_LEN 1024
 
 #include "confyaml.c"
@@ -34,7 +33,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     AppProto alproto2;
 
     if (alpd_tctx == NULL) {
-        //global init
+        // global init
         InitGlobal();
         run_mode = RUNMODE_UNITTEST;
         if (ConfYamlLoadString(configNoChecksum, strlen(configNoChecksum)) != 0) {
@@ -76,7 +75,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
          * we find the same protocol or ALPROTO_UNKNOWN.
          * Otherwise, we have evasion with TCP splitting
          */
-        for (size_t i = 0; i < size-HEADER_LEN && i < PROTO_DETECT_MAX_LEN; i++) {
+        for (size_t i = 0; i < size - HEADER_LEN && i < PROTO_DETECT_MAX_LEN; i++) {
             // reset detection at each try cf probing_parser_toserver_alproto_masks
             AppLayerProtoDetectReset(f);
             alproto2 = AppLayerProtoDetectGetProto(

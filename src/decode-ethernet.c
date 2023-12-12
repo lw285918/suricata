@@ -21,7 +21,6 @@
  * @{
  */
 
-
 /**
  * \file
  *
@@ -35,12 +34,12 @@
 #include "decode-ethernet.h"
 #include "decode-events.h"
 
-#include "util-validate.h"
-#include "util-unittest.h"
-#include "util-debug.h"
+#include "util/validate.h"
+#include "util/unittest.h"
+#include "util/debug.h"
 
-int DecodeEthernet(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p,
-                   const uint8_t *pkt, uint32_t len)
+int DecodeEthernet(
+        ThreadVars *tv, DecodeThreadVars *dtv, Packet *p, const uint8_t *pkt, uint32_t len)
 {
     DEBUG_VALIDATE_BUG_ON(pkt == NULL);
 
@@ -58,8 +57,8 @@ int DecodeEthernet(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p,
 
     SCLogDebug("p %p pkt %p ether type %04x", p, pkt, SCNtohs(p->ethh->eth_type));
 
-    DecodeNetworkLayer(tv, dtv, SCNtohs(p->ethh->eth_type), p,
-            pkt + ETHERNET_HEADER_LEN, len - ETHERNET_HEADER_LEN);
+    DecodeNetworkLayer(tv, dtv, SCNtohs(p->ethh->eth_type), p, pkt + ETHERNET_HEADER_LEN,
+            len - ETHERNET_HEADER_LEN);
 
     return TM_ECODE_OK;
 }
@@ -69,9 +68,10 @@ int DecodeEthernet(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p,
  *  \brief Valid Ethernet packet
  *  \retval 0 Expected test value
  */
-static int DecodeEthernetTest01 (void)
+static int DecodeEthernetTest01(void)
 {
     /* ICMP packet wrapped in PPPOE */
+    // clang-format off
     uint8_t raw_eth[] = {
         0x00, 0x10, 0x94, 0x55, 0x00, 0x01, 0x00, 0x10,
         0x94, 0x56, 0x00, 0x01, 0x88, 0x64, 0x11, 0x00,
@@ -89,6 +89,7 @@ static int DecodeEthernetTest01 (void)
         0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd,
         0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd,
         0xab, 0xcd };
+    // clang-format on
 
     Packet *p = PacketGetFromAlloc();
     if (unlikely(p == NULL))
@@ -97,7 +98,7 @@ static int DecodeEthernetTest01 (void)
     DecodeThreadVars dtv;
 
     memset(&dtv, 0, sizeof(DecodeThreadVars));
-    memset(&tv,  0, sizeof(ThreadVars));
+    memset(&tv, 0, sizeof(ThreadVars));
 
     DecodeEthernet(&tv, &dtv, p, raw_eth, sizeof(raw_eth));
 
@@ -110,10 +111,12 @@ static int DecodeEthernetTest01 (void)
  */
 static int DecodeEthernetTestDceTooSmall(void)
 {
+    // clang-format off
     uint8_t raw_eth[] = {
         0x00, 0x10, 0x94, 0x55, 0x00, 0x01, 0x00, 0x10,
         0x94, 0x56, 0x00, 0x01, 0x89, 0x03,
     };
+    // clang-format on
 
     Packet *p = PacketGetFromAlloc();
     FAIL_IF_NULL(p);
@@ -121,7 +124,7 @@ static int DecodeEthernetTestDceTooSmall(void)
     DecodeThreadVars dtv;
 
     memset(&dtv, 0, sizeof(DecodeThreadVars));
-    memset(&tv,  0, sizeof(ThreadVars));
+    memset(&tv, 0, sizeof(ThreadVars));
 
     DecodeEthernet(&tv, &dtv, p, raw_eth, sizeof(raw_eth));
 
@@ -140,6 +143,7 @@ static int DecodeEthernetTestDceTooSmall(void)
  */
 static int DecodeEthernetTestDceNextTooSmall(void)
 {
+    // clang-format off
     uint8_t raw_eth[] = {
         0x00, 0x10, 0x94, 0x55, 0x00, 0x01, 0x00, 0x10,
         0x94, 0x56, 0x00, 0x01, 0x89, 0x03, //0x88, 0x64,
@@ -149,6 +153,7 @@ static int DecodeEthernetTestDceNextTooSmall(void)
         0x00, 0x10, 0x94, 0x55, 0x00, 0x01, 0x00, 0x10,
         0x94, 0x56, 0x00, 0x01,
     };
+    // clang-format on
 
     Packet *p = PacketGetFromAlloc();
     FAIL_IF_NULL(p);
@@ -156,7 +161,7 @@ static int DecodeEthernetTestDceNextTooSmall(void)
     DecodeThreadVars dtv;
 
     memset(&dtv, 0, sizeof(DecodeThreadVars));
-    memset(&tv,  0, sizeof(ThreadVars));
+    memset(&tv, 0, sizeof(ThreadVars));
 
     DecodeEthernet(&tv, &dtv, p, raw_eth, sizeof(raw_eth));
 
@@ -168,7 +173,6 @@ static int DecodeEthernetTestDceNextTooSmall(void)
 
 #endif /* UNITTESTS */
 
-
 /**
  * \brief Registers Ethernet unit tests
  * \todo More Ethernet tests
@@ -177,10 +181,8 @@ void DecodeEthernetRegisterTests(void)
 {
 #ifdef UNITTESTS
     UtRegisterTest("DecodeEthernetTest01", DecodeEthernetTest01);
-    UtRegisterTest("DecodeEthernetTestDceNextTooSmall",
-            DecodeEthernetTestDceNextTooSmall);
-    UtRegisterTest("DecodeEthernetTestDceTooSmall",
-            DecodeEthernetTestDceTooSmall);
+    UtRegisterTest("DecodeEthernetTestDceNextTooSmall", DecodeEthernetTestDceNextTooSmall);
+    UtRegisterTest("DecodeEthernetTestDceTooSmall", DecodeEthernetTestDceTooSmall);
 #endif /* UNITTESTS */
 }
 /**

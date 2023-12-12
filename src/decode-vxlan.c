@@ -32,20 +32,20 @@
 #include "decode-events.h"
 
 #include "detect.h"
-#include "detect-engine-port.h"
+#include "detect/engine/port.h"
 
 #include "flow.h"
 
-#include "util-validate.h"
-#include "util-unittest.h"
-#include "util-debug.h"
+#include "util/validate.h"
+#include "util/unittest.h"
+#include "util/debug.h"
 
 #define VXLAN_HEADER_LEN sizeof(VXLANHeader)
 
-#define VXLAN_MAX_PORTS         4
-#define VXLAN_UNSET_PORT        -1
-#define VXLAN_DEFAULT_PORT      4789
-#define VXLAN_DEFAULT_PORT_S    "4789"
+#define VXLAN_MAX_PORTS      4
+#define VXLAN_UNSET_PORT     -1
+#define VXLAN_DEFAULT_PORT   4789
+#define VXLAN_DEFAULT_PORT_S "4789"
 
 static bool g_vxlan_enabled = true;
 static int g_vxlan_ports_idx = 0;
@@ -119,8 +119,7 @@ void DecodeVXLANConfig(void)
 /** \param pkt payload data directly above UDP header
  *  \param len length in bytes of pkt
  */
-int DecodeVXLAN(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p,
-        const uint8_t *pkt, uint32_t len)
+int DecodeVXLAN(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p, const uint8_t *pkt, uint32_t len)
 {
     DEBUG_VALIDATE_BUG_ON(pkt == NULL);
 
@@ -195,8 +194,9 @@ int DecodeVXLAN(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p,
  * \test DecodeVXLANTest01 test a good vxlan header.
  * Contains a DNS request packet.
  */
-static int DecodeVXLANtest01 (void)
+static int DecodeVXLANtest01(void)
 {
+    // clang-format off
     uint8_t raw_vxlan[] = {
         0x12, 0xb5, 0x12, 0xb5, 0x00, 0x3a, 0x87, 0x51, /* UDP header */
         0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x25, 0x00, /* VXLAN header */
@@ -207,6 +207,7 @@ static int DecodeVXLANtest01 (void)
         0x44, 0x45, 0x0a, 0x60, 0x00, 0x0a, 0xb9, 0x1b, 0x73, 0x06,  /* IPv4 hdr */
         0x00, 0x35, 0x30, 0x39, 0x00, 0x08, 0x98, 0xe4 /* UDP probe src port 53 */
     };
+    // clang-format on
     Packet *p = PacketGetFromAlloc();
     FAIL_IF_NULL(p);
     ThreadVars tv;
@@ -234,8 +235,9 @@ static int DecodeVXLANtest01 (void)
 /**
  * \test DecodeVXLANtest02 tests default port disabled by the config.
  */
-static int DecodeVXLANtest02 (void)
+static int DecodeVXLANtest02(void)
 {
+    // clang-format off
     uint8_t raw_vxlan[] = {
         0x12, 0xb5, 0x12, 0xb5, 0x00, 0x3a, 0x87, 0x51, /* UDP header */
         0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x25, 0x00, /* VXLAN header */
@@ -246,6 +248,7 @@ static int DecodeVXLANtest02 (void)
         0x44, 0x45, 0x0a, 0x60, 0x00, 0x0a, 0xb9, 0x1b, 0x73, 0x06,  /* IPv4 hdr */
         0x00, 0x35, 0x30, 0x39, 0x00, 0x08, 0x98, 0xe4 /* UDP probe src port 53 */
     };
+    // clang-format on
     Packet *p = PacketGetFromAlloc();
     FAIL_IF_NULL(p);
     ThreadVars tv;
@@ -270,9 +273,7 @@ static int DecodeVXLANtest02 (void)
 void DecodeVXLANRegisterTests(void)
 {
 #ifdef UNITTESTS
-    UtRegisterTest("DecodeVXLANtest01",
-                   DecodeVXLANtest01);
-    UtRegisterTest("DecodeVXLANtest02",
-                   DecodeVXLANtest02);
+    UtRegisterTest("DecodeVXLANtest01", DecodeVXLANtest01);
+    UtRegisterTest("DecodeVXLANtest02", DecodeVXLANtest02);
 #endif /* UNITTESTS */
 }

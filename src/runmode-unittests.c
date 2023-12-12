@@ -22,23 +22,23 @@
 
 #include "suricata-common.h"
 #include "runmode-unittests.h"
-#include "util-unittest.h"
+#include "util/unittest.h"
 
-#include "util-debug.h"
+#include "util/debug.h"
 #ifdef UNITTESTS
 #include "detect-parse.h"
 #include "detect-engine.h"
-#include "detect-engine-alert.h"
-#include "detect-engine-address.h"
-#include "detect-engine-proto.h"
-#include "detect-engine-port.h"
-#include "detect-engine-mpm.h"
-#include "detect-engine-sigorder.h"
-#include "detect-engine-payload.h"
-#include "detect-engine-dcepayload.h"
-#include "detect-engine-state.h"
-#include "detect-engine-tag.h"
-#include "detect-engine-enip.h"
+#include "detect/engine/alert.h"
+#include "detect/engine/address.h"
+#include "detect/engine/proto.h"
+#include "detect/engine/port.h"
+#include "detect/engine/mpm.h"
+#include "detect/engine/sigorder.h"
+#include "detect/engine/payload.h"
+#include "detect/engine/dcepayload.h"
+#include "detect/engine/state.h"
+#include "detect/engine/tag.h"
+#include "detect/engine/enip.h"
 #include "detect-fast-pattern.h"
 #include "flow.h"
 #include "flow-timeout.h"
@@ -58,53 +58,53 @@
 #include "app-layer-detect-proto.h"
 #include "app-layer-parser.h"
 #include "app-layer.h"
-#include "app-layer-htp.h"
-#include "app-layer-ftp.h"
-#include "app-layer-ssl.h"
-#include "app-layer-ssh.h"
-#include "app-layer-smtp.h"
+#include "app-layer/http/parser.h"
+#include "app-layer/ftp/parser.h"
+#include "app-layer/ssl/parser.h"
+#include "app-layer/ssh/parser.h"
+#include "app-layer/smtp/parser.h"
 
-#include "util-action.h"
-#include "util-radix-tree.h"
-#include "util-host-os-info.h"
-#include "util-cidr.h"
-#include "util-unittest-helper.h"
-#include "util-time.h"
-#include "util-rule-vars.h"
-#include "util-classification-config.h"
-#include "util-threshold-config.h"
-#include "util-reference-config.h"
-#include "util-profiling.h"
-#include "util-magic.h"
-#include "util-memcmp.h"
-#include "util-misc.h"
-#include "util-signal.h"
+#include "util/action.h"
+#include "util/radix-tree.h"
+#include "util/host-os-info.h"
+#include "util/cidr.h"
+#include "util/unittest-helper.h"
+#include "util/time.h"
+#include "util/rule-vars.h"
+#include "util/classification-config.h"
+#include "util/threshold-config.h"
+#include "util/reference-config.h"
+#include "util/profiling.h"
+#include "util/magic.h"
+#include "util/memcmp.h"
+#include "util/misc.h"
+#include "util/signal.h"
 
 #include "reputation.h"
-#include "util-atomic.h"
-#include "util-spm.h"
-#include "util-hash.h"
-#include "util-hashlist.h"
-#include "util-bloomfilter.h"
-#include "util-bloomfilter-counting.h"
-#include "util-pool.h"
-#include "util-byte.h"
-#include "util-proto-name.h"
-#include "util-macset.h"
-#include "util-memrchr.h"
+#include "util/atomic.h"
+#include "util/spm.h"
+#include "util/hash.h"
+#include "util/hashlist.h"
+#include "util/bloomfilter.h"
+#include "util/bloomfilter-counting.h"
+#include "util/pool.h"
+#include "util/byte.h"
+#include "util/proto-name.h"
+#include "util/macset.h"
+#include "util/memrchr.h"
 
-#include "util-mpm-ac.h"
-#include "util-mpm-hs.h"
+#include "util/mpm/mpm-ac.h"
+#include "util/mpm/mpm-hs.h"
 
 #include "conf.h"
 #include "conf-yaml-loader.h"
 #include "tmqh-flow.h"
 #include "defrag.h"
-#include "detect-engine-siggroup.h"
+#include "detect/engine/siggroup.h"
 
-#include "util-streaming-buffer.h"
-#include "util-lua.h"
-#include "util-luajit.h"
+#include "util/streaming-buffer.h"
+#include "util/lua/lua.h"
+#include "util/lua/luajit.h"
 #include "tm-modules.h"
 #include "tmqh-packetpool.h"
 #include "decode-chdlc.h"
@@ -115,16 +115,16 @@
 #include "decode-vxlan.h"
 
 #ifdef OS_WIN32
-#include "win32-syscall.h"
+#include "windows/win32-syscall.h"
 #endif
 
 #ifdef WINDIVERT
-#include "source-windivert.h"
+#include "source/windivert/source-windivert.h"
 #endif
 
 #endif /* UNITTESTS */
 
-void TmqhSetup (void);
+void TmqhSetup(void);
 
 #ifdef UNITTESTS
 static void RegisterUnittests(void)
@@ -262,7 +262,7 @@ void RunUnittests(int list_unittests, const char *regex_arg)
 
     StorageFinalize();
     /* test and initialize the unit testing subsystem */
-    if (regex_arg == NULL){
+    if (regex_arg == NULL) {
         regex_arg = ".*";
         UtRunSelftest(regex_arg); /* inits and cleans up again */
     }

@@ -21,7 +21,6 @@
  * @{
  */
 
-
 /**
  * \file
  *
@@ -35,12 +34,11 @@
 #include "decode.h"
 #include "decode-events.h"
 
-#include "util-validate.h"
-#include "util-unittest.h"
-#include "util-debug.h"
+#include "util/validate.h"
+#include "util/unittest.h"
+#include "util/debug.h"
 
-int DecodeRaw(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p,
-        const uint8_t *pkt, uint32_t len)
+int DecodeRaw(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p, const uint8_t *pkt, uint32_t len)
 {
     DEBUG_VALIDATE_BUG_ON(pkt == NULL);
 
@@ -51,8 +49,6 @@ int DecodeRaw(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p,
         ENGINE_SET_INVALID_EVENT(p, IPV4_PKT_TOO_SMALL);
         return TM_ECODE_FAILED;
     }
-
-
 
     if (IP_GET_RAW_VER(pkt) == 4) {
         if (unlikely(GET_PKT_LEN(p) > USHRT_MAX)) {
@@ -68,23 +64,24 @@ int DecodeRaw(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p,
         DecodeIPV6(tv, dtv, p, GET_PKT_DATA(p), (uint16_t)(GET_PKT_LEN(p)));
     } else {
         SCLogDebug("Unknown ip version %d", IP_GET_RAW_VER(pkt));
-        ENGINE_SET_EVENT(p,IPRAW_INVALID_IPV);
+        ENGINE_SET_EVENT(p, IPRAW_INVALID_IPV);
     }
     return TM_ECODE_OK;
 }
 
 #ifdef UNITTESTS
-#include "util-unittest-helper.h"
+#include "util/unittest-helper.h"
 #include "packet.h"
 
 /** DecodeRawtest01
  *  \brief Valid Raw packet
  *  \retval 0 Expected test value
  */
-static int DecodeRawTest01 (void)
+static int DecodeRawTest01(void)
 {
 
     /* IPV6/TCP/no eth header */
+    // clang-format off
     uint8_t raw_ip[] = {
         0x60, 0x00, 0x00, 0x00, 0x00, 0x28, 0x06, 0x40,
         0x20, 0x01, 0x06, 0x18, 0x04, 0x00, 0x00, 0x00,
@@ -96,6 +93,7 @@ static int DecodeRawTest01 (void)
         0x29, 0x9c, 0x00, 0x00, 0x02, 0x04, 0x05, 0x8c,
         0x04, 0x02, 0x08, 0x0a, 0x00, 0xdd, 0x1a, 0x39,
         0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0x03, 0x02 };
+    // clang-format on
     Packet *p = PacketGetFromAlloc();
     if (unlikely(p == NULL))
         return 0;
@@ -103,11 +101,11 @@ static int DecodeRawTest01 (void)
     DecodeThreadVars dtv;
 
     memset(&dtv, 0, sizeof(DecodeThreadVars));
-    memset(&tv,  0, sizeof(ThreadVars));
+    memset(&tv, 0, sizeof(ThreadVars));
 
     if (PacketCopyData(p, raw_ip, sizeof(raw_ip)) == -1) {
-    SCFree(p);
-    return 0;
+        SCFree(p);
+        return 0;
     }
 
     FlowInitConfig(FLOW_QUIET);
@@ -124,16 +122,16 @@ static int DecodeRawTest01 (void)
     FlowShutdown();
     SCFree(p);
     return 1;
-
 }
 /** DecodeRawtest02
  *  \brief Valid Raw packet
  *  \retval 0 Expected test value
  */
-static int DecodeRawTest02 (void)
+static int DecodeRawTest02(void)
 {
 
     /* IPV4/TCP/no eth header */
+    // clang-format off
     uint8_t raw_ip[] = {
         0x45, 0x00, 0x00, 0x30, 0x00, 0xad, 0x40, 0x00,
         0x7f, 0x06, 0xac, 0xc5, 0xc0, 0xa8, 0x67, 0x02,
@@ -141,6 +139,7 @@ static int DecodeRawTest02 (void)
         0x1d, 0xb3, 0x12, 0x37, 0x00, 0x00, 0x00, 0x00,
         0x70, 0x02, 0x40, 0x00, 0xb8, 0xc8, 0x00, 0x00,
         0x02, 0x04, 0x05, 0xb4, 0x01, 0x01, 0x04, 0x02 };
+    // clang-format on
 
     Packet *p = PacketGetFromAlloc();
     if (unlikely(p == NULL))
@@ -149,11 +148,11 @@ static int DecodeRawTest02 (void)
     DecodeThreadVars dtv;
 
     memset(&dtv, 0, sizeof(DecodeThreadVars));
-    memset(&tv,  0, sizeof(ThreadVars));
+    memset(&tv, 0, sizeof(ThreadVars));
 
     if (PacketCopyData(p, raw_ip, sizeof(raw_ip)) == -1) {
-    SCFree(p);
-    return 0;
+        SCFree(p);
+        return 0;
     }
 
     FlowInitConfig(FLOW_QUIET);
@@ -176,10 +175,11 @@ static int DecodeRawTest02 (void)
  *  \brief Valid Raw packet
  *  \retval 0 Expected test value
  */
-static int DecodeRawTest03 (void)
+static int DecodeRawTest03(void)
 {
 
     /* IPV13 */
+    // clang-format off
     uint8_t raw_ip[] = {
         0xdf, 0x00, 0x00, 0x3d, 0x49, 0x42, 0x40, 0x00,
         0x40, 0x06, 0xcf, 0x8a, 0x0a, 0x1f, 0x03, 0xaf,
@@ -189,6 +189,7 @@ static int DecodeRawTest03 (void)
         0x01, 0x01, 0x08, 0x0a, 0x00, 0x08, 0xab, 0x4f,
         0x34, 0x40, 0x67, 0x31, 0x3b, 0x63, 0x61, 0x74,
         0x20, 0x6b, 0x65, 0x79, 0x3b };
+    // clang-format on
 
     Packet *p = PacketGetFromAlloc();
     if (unlikely(p == NULL))
@@ -197,7 +198,7 @@ static int DecodeRawTest03 (void)
     DecodeThreadVars dtv;
 
     memset(&dtv, 0, sizeof(DecodeThreadVars));
-    memset(&tv,  0, sizeof(ThreadVars));
+    memset(&tv, 0, sizeof(ThreadVars));
 
     if (PacketCopyData(p, raw_ip, sizeof(raw_ip)) == -1) {
         SCFree(p);
@@ -207,7 +208,7 @@ static int DecodeRawTest03 (void)
     FlowInitConfig(FLOW_QUIET);
 
     DecodeRaw(&tv, &dtv, p, raw_ip, GET_PKT_LEN(p));
-    if (!ENGINE_ISSET_EVENT(p,IPRAW_INVALID_IPV)) {
+    if (!ENGINE_ISSET_EVENT(p, IPRAW_INVALID_IPV)) {
         printf("expected IPRAW_INVALID_IPV to be set but it wasn't: ");
         FlowShutdown();
         SCFree(p);

@@ -26,7 +26,7 @@
 #include "suricata.h"
 #include "threads.h"
 #include "tm-queues.h"
-#include "util-debug.h"
+#include "util/debug.h"
 
 static TAILQ_HEAD(TmqList_, Tmq_) tmq_list = TAILQ_HEAD_INITIALIZER(tmq_list);
 
@@ -59,7 +59,7 @@ Tmq *TmqCreateQueue(const char *name)
 Tmq *TmqGetQueueByName(const char *name)
 {
     Tmq *tmq = NULL;
-    TAILQ_FOREACH(tmq, &tmq_list, next) {
+    TAILQ_FOREACH (tmq, &tmq_list, next) {
         if (strcmp(tmq->name, name) == 0)
             return tmq;
     }
@@ -69,10 +69,11 @@ Tmq *TmqGetQueueByName(const char *name)
 void TmqDebugList(void)
 {
     Tmq *tmq = NULL;
-    TAILQ_FOREACH(tmq, &tmq_list, next) {
+    TAILQ_FOREACH (tmq, &tmq_list, next) {
         /* get a lock accessing the len */
         SCMutexLock(&tmq->pq->mutex_q);
-        printf("TmqDebugList: id %" PRIu32 ", name \'%s\', len %" PRIu32 "\n", tmq->id, tmq->name, tmq->pq->len);
+        printf("TmqDebugList: id %" PRIu32 ", name \'%s\', len %" PRIu32 "\n", tmq->id, tmq->name,
+                tmq->pq->len);
         SCMutexUnlock(&tmq->pq->mutex_q);
     }
 }
@@ -103,7 +104,7 @@ void TmValidateQueueState(void)
     bool err = false;
 
     Tmq *tmq = NULL;
-    TAILQ_FOREACH(tmq, &tmq_list, next) {
+    TAILQ_FOREACH (tmq, &tmq_list, next) {
         SCMutexLock(&tmq->pq->mutex_q);
         if (tmq->reader_cnt == 0) {
             SCLogError("queue \"%s\" doesn't have a reader (id %d max %u)", tmq->name, tmq->id,

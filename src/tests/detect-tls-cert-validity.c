@@ -23,7 +23,7 @@
  */
 
 #include "detect-engine-build.h"
-#include "detect-engine-alert.h"
+#include "detect/engine/alert.h"
 #include "app-layer-parser.h"
 
 /**
@@ -32,7 +32,7 @@
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse01 (void)
+static int ValidityTestParse01(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("1430000000");
@@ -48,7 +48,7 @@ static int ValidityTestParse01 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse02 (void)
+static int ValidityTestParse02(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse(">1430000000");
@@ -64,7 +64,7 @@ static int ValidityTestParse02 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse03 (void)
+static int ValidityTestParse03(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("<1430000000");
@@ -80,7 +80,7 @@ static int ValidityTestParse03 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse04 (void)
+static int ValidityTestParse04(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("1430000000<>1470000000");
@@ -97,7 +97,7 @@ static int ValidityTestParse04 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse05 (void)
+static int ValidityTestParse05(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("A");
@@ -111,7 +111,7 @@ static int ValidityTestParse05 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse06 (void)
+static int ValidityTestParse06(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse(">1430000000<>1470000000");
@@ -125,7 +125,7 @@ static int ValidityTestParse06 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse07 (void)
+static int ValidityTestParse07(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("1430000000<>");
@@ -139,7 +139,7 @@ static int ValidityTestParse07 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse08 (void)
+static int ValidityTestParse08(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("<>1430000000");
@@ -153,7 +153,7 @@ static int ValidityTestParse08 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse09 (void)
+static int ValidityTestParse09(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("");
@@ -167,7 +167,7 @@ static int ValidityTestParse09 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse10 (void)
+static int ValidityTestParse10(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse(" ");
@@ -181,7 +181,7 @@ static int ValidityTestParse10 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse11 (void)
+static int ValidityTestParse11(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("1490000000<>1430000000");
@@ -195,7 +195,7 @@ static int ValidityTestParse11 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse12 (void)
+static int ValidityTestParse12(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("1430000000 <> 1490000000");
@@ -212,7 +212,7 @@ static int ValidityTestParse12 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse13 (void)
+static int ValidityTestParse13(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("> 1430000000 ");
@@ -228,7 +228,7 @@ static int ValidityTestParse13 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse14 (void)
+static int ValidityTestParse14(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("<   1490000000 ");
@@ -244,7 +244,7 @@ static int ValidityTestParse14 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse15 (void)
+static int ValidityTestParse15(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("   1490000000 ");
@@ -260,7 +260,7 @@ static int ValidityTestParse15 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse16 (void)
+static int ValidityTestParse16(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("2015-10");
@@ -276,7 +276,7 @@ static int ValidityTestParse16 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse17 (void)
+static int ValidityTestParse17(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse(">2015-10-22");
@@ -292,7 +292,7 @@ static int ValidityTestParse17 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse18 (void)
+static int ValidityTestParse18(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("<2015-10-22 23");
@@ -308,7 +308,7 @@ static int ValidityTestParse18 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse19 (void)
+static int ValidityTestParse19(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("2015-10-22 23:59");
@@ -324,7 +324,7 @@ static int ValidityTestParse19 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse20 (void)
+static int ValidityTestParse20(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("2015-10-22 23:59:59");
@@ -340,7 +340,7 @@ static int ValidityTestParse20 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse21 (void)
+static int ValidityTestParse21(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("2015-10-22T23");
@@ -356,7 +356,7 @@ static int ValidityTestParse21 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse22 (void)
+static int ValidityTestParse22(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("2015-10-22T23:59");
@@ -372,7 +372,7 @@ static int ValidityTestParse22 (void)
  * \retval 1 on success.
  * \retval 0 on failure.
  */
-static int ValidityTestParse23 (void)
+static int ValidityTestParse23(void)
 {
     DetectTlsValidityData *dd = NULL;
     dd = DetectTlsValidityParse("2015-10-22T23:59:59");
@@ -428,6 +428,7 @@ static int ValidityTestParse25(void)
 static int ValidityTestDetect01(void)
 {
     /* client hello */
+    // clang-format off
     uint8_t client_hello[] = {
             0x16, 0x03, 0x01, 0x00, 0xc8, 0x01, 0x00, 0x00,
             0xc4, 0x03, 0x03, 0xd6, 0x08, 0x5a, 0xa2, 0x86,
@@ -456,8 +457,10 @@ static int ValidityTestDetect01(void)
             0x01, 0x04, 0x03, 0x05, 0x03, 0x06, 0x03, 0x02,
             0x03, 0x04, 0x02, 0x02, 0x02
     };
+    // clang-format on
 
     /* server hello */
+    // clang-format off
     uint8_t server_hello[] = {
             0x16, 0x03, 0x03, 0x00, 0x48, 0x02, 0x00, 0x00,
             0x44, 0x03, 0x03, 0x57, 0x91, 0xb8, 0x63, 0xdd,
@@ -470,8 +473,10 @@ static int ValidityTestDetect01(void)
             0x00, 0x05, 0x00, 0x03, 0x02, 0x68, 0x32, 0x00,
             0x0b, 0x00, 0x02, 0x01, 0x00
     };
+    // clang-format on
 
     /* certificate */
+    // clang-format off
     uint8_t certificate[] = {
             0x16, 0x03, 0x03, 0x04, 0x93, 0x0b, 0x00, 0x04,
             0x8f, 0x00, 0x04, 0x8c, 0x00, 0x04, 0x89, 0x30,
@@ -621,6 +626,7 @@ static int ValidityTestDetect01(void)
             0x4d, 0xd1, 0x4b, 0x41, 0x8f, 0x40, 0x0f, 0x7d,
             0xcd, 0xb8, 0x2e, 0x5b, 0x6e, 0x21, 0xc9, 0x3d
     };
+    // clang-format on
 
     Flow f;
     SSLState *ssl_state = NULL;
@@ -636,12 +642,12 @@ static int ValidityTestDetect01(void)
     memset(&f, 0, sizeof(Flow));
     memset(&ssn, 0, sizeof(TcpSession));
 
-    p1 = UTHBuildPacketReal(client_hello, sizeof(client_hello), IPPROTO_TCP,
-                            "192.168.1.5", "192.168.1.1", 51251, 443);
-    p2 = UTHBuildPacketReal(server_hello, sizeof(server_hello), IPPROTO_TCP,
-                            "192.168.1.1", "192.168.1.5", 443, 51251);
-    p3 = UTHBuildPacketReal(certificate, sizeof(certificate), IPPROTO_TCP,
-                            "192.168.1.1", "192.168.1.5", 443, 51251);
+    p1 = UTHBuildPacketReal(client_hello, sizeof(client_hello), IPPROTO_TCP, "192.168.1.5",
+            "192.168.1.1", 51251, 443);
+    p2 = UTHBuildPacketReal(server_hello, sizeof(server_hello), IPPROTO_TCP, "192.168.1.1",
+            "192.168.1.5", 443, 51251);
+    p3 = UTHBuildPacketReal(certificate, sizeof(certificate), IPPROTO_TCP, "192.168.1.1",
+            "192.168.1.5", 443, 51251);
 
     FLOW_INITIALIZE(&f);
     f.flags |= FLOW_IPV4;
@@ -675,21 +681,20 @@ static int ValidityTestDetect01(void)
     de_ctx->flags |= DE_QUIET;
 
     Signature *s = DetectEngineAppendSig(de_ctx, "alert tls any any -> any any "
-                                     "(msg:\"Test tls_cert_notbefore\"; "
-                                     "tls_cert_notbefore:<2016-07-20; sid:1;)");
+                                                 "(msg:\"Test tls_cert_notbefore\"; "
+                                                 "tls_cert_notbefore:<2016-07-20; sid:1;)");
     FAIL_IF_NULL(s);
 
     s = DetectEngineAppendSig(de_ctx, "alert tls any any -> any any "
-                              "(msg:\"Test tls_cert_notafter\"; "
-                              "tls_cert_notafter:>2016-09-01; sid:2;)");
+                                      "(msg:\"Test tls_cert_notafter\"; "
+                                      "tls_cert_notafter:>2016-09-01; sid:2;)");
     FAIL_IF_NULL(s);
 
     SigGroupBuild(de_ctx);
     DetectEngineThreadCtxInit(&tv, (void *)de_ctx, (void *)&det_ctx);
 
-    int r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_TLS,
-                                STREAM_TOSERVER, client_hello,
-                                sizeof(client_hello));
+    int r = AppLayerParserParse(
+            NULL, alp_tctx, &f, ALPROTO_TLS, STREAM_TOSERVER, client_hello, sizeof(client_hello));
 
     FAIL_IF(r != 0);
 
@@ -701,8 +706,8 @@ static int ValidityTestDetect01(void)
     FAIL_IF(PacketAlertCheck(p1, 1));
     FAIL_IF(PacketAlertCheck(p1, 2));
 
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_TLS, STREAM_TOCLIENT,
-                            server_hello, sizeof(server_hello));
+    r = AppLayerParserParse(
+            NULL, alp_tctx, &f, ALPROTO_TLS, STREAM_TOCLIENT, server_hello, sizeof(server_hello));
 
     FAIL_IF(r != 0);
 
@@ -711,8 +716,8 @@ static int ValidityTestDetect01(void)
     FAIL_IF(PacketAlertCheck(p2, 1));
     FAIL_IF(PacketAlertCheck(p2, 2));
 
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_TLS, STREAM_TOCLIENT,
-                            certificate, sizeof(certificate));
+    r = AppLayerParserParse(
+            NULL, alp_tctx, &f, ALPROTO_TLS, STREAM_TOCLIENT, certificate, sizeof(certificate));
 
     FAIL_IF(r != 0);
 
@@ -745,6 +750,7 @@ static int ValidityTestDetect01(void)
 static int ExpiredTestDetect01(void)
 {
     /* client hello */
+    // clang-format off
     uint8_t client_hello[] = {
             0x16, 0x03, 0x03, 0x00, 0x5a, 0x01, 0x00, 0x00,
             0x56, 0x03, 0x03, 0x62, 0x87, 0xa4, 0x11, 0x3e,
@@ -759,8 +765,10 @@ static int ExpiredTestDetect01(void)
             0x6c, 0x2e, 0x63, 0x6f, 0x6d, 0x00, 0x0d, 0x00,
             0x06, 0x00, 0x04, 0x04, 0x01, 0x02, 0x01
     };
+    // clang-format on
 
     /* server hello */
+    // clang-format off
     uint8_t server_hello[] = {
             0x16, 0x03, 0x03, 0x00, 0x55, 0x02, 0x00, 0x00,
             0x51, 0x03, 0x03, 0x22, 0xa1, 0xd8, 0xd0, 0x3c,
@@ -775,8 +783,10 @@ static int ExpiredTestDetect01(void)
             0x09, 0x00, 0x00, 0x00, 0x00, 0xff, 0x01, 0x00,
             0x01, 0x00
     };
+    // clang-format on
 
     /* certificate */
+    // clang-format off
     uint8_t certificate[] = {
             0x16, 0x03, 0x03, 0x05, 0x59, 0x0b, 0x00, 0x05,
             0x55, 0x00, 0x05, 0x52, 0x00, 0x05, 0x4f, 0x30,
@@ -951,6 +961,7 @@ static int ExpiredTestDetect01(void)
             0x0c, 0x4f, 0xbb, 0x36, 0x44, 0x68, 0x56, 0x5c,
             0x56, 0x59, 0xad, 0xaa, 0x8a, 0xbc,
     };
+    // clang-format on
 
     Flow f;
     SSLState *ssl_state = NULL;
@@ -966,12 +977,12 @@ static int ExpiredTestDetect01(void)
     memset(&f, 0, sizeof(Flow));
     memset(&ssn, 0, sizeof(TcpSession));
 
-    p1 = UTHBuildPacketReal(client_hello, sizeof(client_hello), IPPROTO_TCP,
-                            "192.168.1.5", "192.168.1.1", 51251, 443);
-    p2 = UTHBuildPacketReal(server_hello, sizeof(server_hello), IPPROTO_TCP,
-                            "192.168.1.1", "192.168.1.5", 443, 51251);
-    p3 = UTHBuildPacketReal(certificate, sizeof(certificate), IPPROTO_TCP,
-                            "192.168.1.1", "192.168.1.5", 443, 51251);
+    p1 = UTHBuildPacketReal(client_hello, sizeof(client_hello), IPPROTO_TCP, "192.168.1.5",
+            "192.168.1.1", 51251, 443);
+    p2 = UTHBuildPacketReal(server_hello, sizeof(server_hello), IPPROTO_TCP, "192.168.1.1",
+            "192.168.1.5", 443, 51251);
+    p3 = UTHBuildPacketReal(certificate, sizeof(certificate), IPPROTO_TCP, "192.168.1.1",
+            "192.168.1.5", 443, 51251);
 
     FLOW_INITIALIZE(&f);
     f.flags |= FLOW_IPV4;
@@ -1007,15 +1018,15 @@ static int ExpiredTestDetect01(void)
     de_ctx->flags |= DE_QUIET;
 
     Signature *s = DetectEngineAppendSig(de_ctx, "alert tls any any -> any any "
-                                         "(msg:\"Test tls_cert_expired\"; "
-                                         "tls_cert_expired; sid:1;)");
+                                                 "(msg:\"Test tls_cert_expired\"; "
+                                                 "tls_cert_expired; sid:1;)");
     FAIL_IF_NULL(s);
 
     SigGroupBuild(de_ctx);
     DetectEngineThreadCtxInit(&tv, (void *)de_ctx, (void *)&det_ctx);
 
-    int r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_TLS, STREAM_TOSERVER,
-                                client_hello, sizeof(client_hello));
+    int r = AppLayerParserParse(
+            NULL, alp_tctx, &f, ALPROTO_TLS, STREAM_TOSERVER, client_hello, sizeof(client_hello));
 
     FAIL_IF(r != 0);
 
@@ -1026,8 +1037,8 @@ static int ExpiredTestDetect01(void)
 
     FAIL_IF(PacketAlertCheck(p1, 1));
 
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_TLS, STREAM_TOCLIENT,
-                            server_hello, sizeof(server_hello));
+    r = AppLayerParserParse(
+            NULL, alp_tctx, &f, ALPROTO_TLS, STREAM_TOCLIENT, server_hello, sizeof(server_hello));
 
     FAIL_IF(r != 0);
 
@@ -1035,8 +1046,8 @@ static int ExpiredTestDetect01(void)
 
     FAIL_IF(PacketAlertCheck(p2, 1));
 
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_TLS, STREAM_TOCLIENT,
-                            certificate, sizeof(certificate));
+    r = AppLayerParserParse(
+            NULL, alp_tctx, &f, ALPROTO_TLS, STREAM_TOCLIENT, certificate, sizeof(certificate));
 
     FAIL_IF(r != 0);
 
@@ -1066,6 +1077,7 @@ static int ExpiredTestDetect01(void)
 static int ValidTestDetect01(void)
 {
     /* client hello */
+    // clang-format off
     uint8_t client_hello[] = {
             0x16, 0x03, 0x01, 0x00, 0xc8, 0x01, 0x00, 0x00,
             0xc4, 0x03, 0x03, 0xd6, 0x08, 0x5a, 0xa2, 0x86,
@@ -1094,8 +1106,10 @@ static int ValidTestDetect01(void)
             0x01, 0x04, 0x03, 0x05, 0x03, 0x06, 0x03, 0x02,
             0x03, 0x04, 0x02, 0x02, 0x02
     };
+    // clang-format on
 
     /* server hello */
+    // clang-format off
     uint8_t server_hello[] = {
             0x16, 0x03, 0x03, 0x00, 0x48, 0x02, 0x00, 0x00,
             0x44, 0x03, 0x03, 0x57, 0x91, 0xb8, 0x63, 0xdd,
@@ -1108,8 +1122,10 @@ static int ValidTestDetect01(void)
             0x00, 0x05, 0x00, 0x03, 0x02, 0x68, 0x32, 0x00,
             0x0b, 0x00, 0x02, 0x01, 0x00
     };
+    // clang-format on
 
     /* certificate */
+    // clang-format off
     uint8_t certificate[] = {
             0x16, 0x03, 0x03, 0x04, 0x93, 0x0b, 0x00, 0x04,
             0x8f, 0x00, 0x04, 0x8c, 0x00, 0x04, 0x89, 0x30,
@@ -1259,6 +1275,7 @@ static int ValidTestDetect01(void)
             0x4d, 0xd1, 0x4b, 0x41, 0x8f, 0x40, 0x0f, 0x7d,
             0xcd, 0xb8, 0x2e, 0x5b, 0x6e, 0x21, 0xc9, 0x3d
     };
+    // clang-format on
 
     Flow f;
     SSLState *ssl_state = NULL;
@@ -1274,12 +1291,12 @@ static int ValidTestDetect01(void)
     memset(&f, 0, sizeof(Flow));
     memset(&ssn, 0, sizeof(TcpSession));
 
-    p1 = UTHBuildPacketReal(client_hello, sizeof(client_hello), IPPROTO_TCP,
-                            "192.168.1.5", "192.168.1.1", 51251, 443);
-    p2 = UTHBuildPacketReal(server_hello, sizeof(server_hello), IPPROTO_TCP,
-                            "192.168.1.1", "192.168.1.5", 443, 51251);
-    p3 = UTHBuildPacketReal(certificate, sizeof(certificate), IPPROTO_TCP,
-                            "192.168.1.1", "192.168.1.5", 443, 51251);
+    p1 = UTHBuildPacketReal(client_hello, sizeof(client_hello), IPPROTO_TCP, "192.168.1.5",
+            "192.168.1.1", 51251, 443);
+    p2 = UTHBuildPacketReal(server_hello, sizeof(server_hello), IPPROTO_TCP, "192.168.1.1",
+            "192.168.1.5", 443, 51251);
+    p3 = UTHBuildPacketReal(certificate, sizeof(certificate), IPPROTO_TCP, "192.168.1.1",
+            "192.168.1.5", 443, 51251);
 
     FLOW_INITIALIZE(&f);
     f.flags |= FLOW_IPV4;
@@ -1315,15 +1332,15 @@ static int ValidTestDetect01(void)
     de_ctx->flags |= DE_QUIET;
 
     Signature *s = DetectEngineAppendSig(de_ctx, "alert tls any any -> any any "
-                                         "(msg:\"Test tls_cert_valid\"; "
-                                         "tls_cert_valid; sid:1;)");
+                                                 "(msg:\"Test tls_cert_valid\"; "
+                                                 "tls_cert_valid; sid:1;)");
     FAIL_IF_NULL(s);
 
     SigGroupBuild(de_ctx);
     DetectEngineThreadCtxInit(&tv, (void *)de_ctx, (void *)&det_ctx);
 
-    int r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_TLS, STREAM_TOSERVER,
-                                client_hello, sizeof(client_hello));
+    int r = AppLayerParserParse(
+            NULL, alp_tctx, &f, ALPROTO_TLS, STREAM_TOSERVER, client_hello, sizeof(client_hello));
 
     FAIL_IF(r != 0);
 
@@ -1334,8 +1351,8 @@ static int ValidTestDetect01(void)
 
     FAIL_IF(PacketAlertCheck(p1, 1));
 
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_TLS, STREAM_TOCLIENT,
-                            server_hello, sizeof(server_hello));
+    r = AppLayerParserParse(
+            NULL, alp_tctx, &f, ALPROTO_TLS, STREAM_TOCLIENT, server_hello, sizeof(server_hello));
 
     FAIL_IF(r != 0);
 
@@ -1343,8 +1360,8 @@ static int ValidTestDetect01(void)
 
     FAIL_IF(PacketAlertCheck(p2, 1));
 
-    r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_TLS, STREAM_TOCLIENT,
-                            certificate, sizeof(certificate));
+    r = AppLayerParserParse(
+            NULL, alp_tctx, &f, ALPROTO_TLS, STREAM_TOCLIENT, certificate, sizeof(certificate));
 
     FAIL_IF(r != 0);
 

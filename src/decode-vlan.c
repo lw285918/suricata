@@ -21,7 +21,6 @@
  * @{
  */
 
-
 /**
  * \file
  *
@@ -35,9 +34,9 @@
 #include "decode-vlan.h"
 #include "decode-events.h"
 
-#include "util-validate.h"
-#include "util-unittest.h"
-#include "util-debug.h"
+#include "util/validate.h"
+#include "util/unittest.h"
+#include "util/debug.h"
 
 /**
  * \internal
@@ -51,8 +50,7 @@
  * \param pq pointer to the packet queue
  *
  */
-int DecodeVLAN(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p,
-        const uint8_t *pkt, uint32_t len)
+int DecodeVLAN(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p, const uint8_t *pkt, uint32_t len)
 {
     DEBUG_VALIDATE_BUG_ON(pkt == NULL);
 
@@ -65,7 +63,7 @@ int DecodeVLAN(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p,
     else if (p->vlan_idx == 2)
         StatsIncr(tv, dtv->counter_vlan_qinqinq);
 
-    if(len < VLAN_HEADER_LEN)    {
+    if (len < VLAN_HEADER_LEN) {
         ENGINE_SET_INVALID_EVENT(p, VLAN_HEADER_TOO_SMALL);
         return TM_ECODE_FAILED;
     }
@@ -73,7 +71,7 @@ int DecodeVLAN(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p,
         return TM_ECODE_FAILED;
     }
     if (p->vlan_idx > VLAN_MAX_LAYER_IDX) {
-        ENGINE_SET_EVENT(p,VLAN_HEADER_TOO_MANY_LAYERS);
+        ENGINE_SET_EVENT(p, VLAN_HEADER_TOO_MANY_LAYERS);
         return TM_ECODE_FAILED;
     }
 
@@ -87,8 +85,8 @@ int DecodeVLAN(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p,
 
     p->vlan_id[p->vlan_idx++] = (uint16_t)GET_VLAN_ID(vlan_hdr);
 
-    if (DecodeNetworkLayer(tv, dtv, proto, p,
-                pkt + VLAN_HEADER_LEN, len - VLAN_HEADER_LEN) == false) {
+    if (DecodeNetworkLayer(tv, dtv, proto, p, pkt + VLAN_HEADER_LEN, len - VLAN_HEADER_LEN) ==
+            false) {
         ENGINE_SET_INVALID_EVENT(p, VLAN_UNKNOWN_TYPE);
         return TM_ECODE_FAILED;
     }
@@ -99,13 +97,13 @@ typedef struct IEEE8021ahHdr_ {
     uint32_t flags;
     uint8_t c_destination[6];
     uint8_t c_source[6];
-    uint16_t type;              /**< next protocol */
-}  __attribute__((__packed__)) IEEE8021ahHdr;
+    uint16_t type; /**< next protocol */
+} __attribute__((__packed__)) IEEE8021ahHdr;
 
 #define IEEE8021AH_HEADER_LEN sizeof(IEEE8021ahHdr)
 
-int DecodeIEEE8021ah(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p,
-        const uint8_t *pkt, uint32_t len)
+int DecodeIEEE8021ah(
+        ThreadVars *tv, DecodeThreadVars *dtv, Packet *p, const uint8_t *pkt, uint32_t len)
 {
     DEBUG_VALIDATE_BUG_ON(pkt == NULL);
 
@@ -119,14 +117,14 @@ int DecodeIEEE8021ah(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p,
     IEEE8021ahHdr *hdr = (IEEE8021ahHdr *)pkt;
     const uint16_t next_proto = SCNtohs(hdr->type);
 
-    DecodeNetworkLayer(tv, dtv, next_proto, p,
-            pkt + IEEE8021AH_HEADER_LEN, len - IEEE8021AH_HEADER_LEN);
+    DecodeNetworkLayer(
+            tv, dtv, next_proto, p, pkt + IEEE8021AH_HEADER_LEN, len - IEEE8021AH_HEADER_LEN);
 
     return TM_ECODE_OK;
 }
 
 #ifdef UNITTESTS
-#include "util-unittest-helper.h"
+#include "util/unittest-helper.h"
 #include "packet.h"
 
 /** \todo Must GRE+VLAN and Multi-Vlan packets to
@@ -139,7 +137,7 @@ int DecodeIEEE8021ah(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p,
  *  \retval 1 on success
  *  \retval 0 on failure
  */
-static int DecodeVLANtest01 (void)
+static int DecodeVLANtest01(void)
 {
     uint8_t raw_vlan[] = { 0x00, 0x20, 0x08 };
     Packet *p = PacketGetFromAlloc();
@@ -153,7 +151,7 @@ static int DecodeVLANtest01 (void)
 
     DecodeVLAN(&tv, &dtv, p, raw_vlan, sizeof(raw_vlan));
 
-    if(ENGINE_ISSET_EVENT(p,VLAN_HEADER_TOO_SMALL))  {
+    if (ENGINE_ISSET_EVENT(p, VLAN_HEADER_TOO_SMALL)) {
         SCFree(p);
         return 1;
     }
@@ -168,8 +166,9 @@ static int DecodeVLANtest01 (void)
  *  \retval 1 on success
  *  \retval 0 on failure
  */
-static int DecodeVLANtest02 (void)
+static int DecodeVLANtest02(void)
 {
+    // clang-format off
     uint8_t raw_vlan[] = {
         0x00, 0x20, 0x01, 0x00, 0x45, 0x00, 0x00, 0x34,
         0x3b, 0x36, 0x40, 0x00, 0x40, 0x06, 0xb7, 0xc9,
@@ -178,6 +177,7 @@ static int DecodeVLANtest02 (void)
         0x4d, 0x3d, 0x5a, 0x61, 0x80, 0x10, 0x6b, 0x50,
         0x3c, 0x4c, 0x00, 0x00, 0x01, 0x01, 0x08, 0x0a,
         0x00, 0x04, 0xf0, 0xc8, 0x01, 0x99, 0xa3, 0xf3};
+    // clang-format on
     Packet *p = PacketGetFromAlloc();
     if (unlikely(p == NULL))
         return 0;
@@ -189,8 +189,7 @@ static int DecodeVLANtest02 (void)
 
     DecodeVLAN(&tv, &dtv, p, raw_vlan, sizeof(raw_vlan));
 
-
-    if(ENGINE_ISSET_EVENT(p,VLAN_UNKNOWN_TYPE))  {
+    if (ENGINE_ISSET_EVENT(p, VLAN_UNKNOWN_TYPE)) {
         SCFree(p);
         return 1;
     }
@@ -205,8 +204,9 @@ static int DecodeVLANtest02 (void)
  *  \retval 1 on success
  *  \retval 0 on failure
  */
-static int DecodeVLANtest03 (void)
+static int DecodeVLANtest03(void)
 {
+    // clang-format off
     uint8_t raw_vlan[] = {
         0x00, 0x20, 0x08, 0x00, 0x45, 0x00, 0x00, 0x34,
         0x3b, 0x36, 0x40, 0x00, 0x40, 0x06, 0xb7, 0xc9,
@@ -215,6 +215,7 @@ static int DecodeVLANtest03 (void)
         0x4d, 0x3d, 0x5a, 0x61, 0x80, 0x10, 0x6b, 0x50,
         0x3c, 0x4c, 0x00, 0x00, 0x01, 0x01, 0x08, 0x0a,
         0x00, 0x04, 0xf0, 0xc8, 0x01, 0x99, 0xa3, 0xf3};
+    // clang-format on
     Packet *p = PacketGetFromAlloc();
     if (unlikely(p == NULL))
         return 0;
@@ -228,16 +229,15 @@ static int DecodeVLANtest03 (void)
 
     DecodeVLAN(&tv, &dtv, p, raw_vlan, sizeof(raw_vlan));
 
-
-    if(p->vlan_id[0] == 0) {
+    if (p->vlan_id[0] == 0) {
         goto error;
     }
 
-    if(ENGINE_ISSET_EVENT(p,VLAN_HEADER_TOO_SMALL))  {
+    if (ENGINE_ISSET_EVENT(p, VLAN_HEADER_TOO_SMALL)) {
         goto error;
     }
 
-    if(ENGINE_ISSET_EVENT(p,VLAN_UNKNOWN_TYPE))  {
+    if (ENGINE_ISSET_EVENT(p, VLAN_UNKNOWN_TYPE)) {
         goto error;
     }
 

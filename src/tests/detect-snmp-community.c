@@ -15,15 +15,15 @@
  * 02110-1301, USA.
  */
 
-#include "util-unittest.h"
-#include "util-unittest-helper.h"
+#include "util/unittest.h"
+#include "util/unittest-helper.h"
 #include "app-layer-parser.h"
 #include "detect-engine.h"
 #include "detect-parse.h"
 #include "flow-util.h"
 #include "stream-tcp.h"
 #include "detect-engine-build.h"
-#include "detect-engine-alert.h"
+#include "detect/engine/alert.h"
 
 static int DetectSNMPCommunityTest(void)
 {
@@ -36,6 +36,7 @@ static int DetectSNMPCommunityTest(void)
     ThreadVars tv;
     Signature *s;
 
+    // clang-format off
     uint8_t request[] = {
         0x30, 0x27, 0x02, 0x01, 0x01, 0x04, 0x0b, 0x5b,
         0x52, 0x30, 0x5f, 0x43, 0x40, 0x63, 0x74, 0x69,
@@ -44,6 +45,7 @@ static int DetectSNMPCommunityTest(void)
         0x30, 0x07, 0x30, 0x05, 0x06, 0x01, 0x01, 0x05,
         0x00
     };
+    // clang-format on
 
     /* Setup flow. */
     memset(&f, 0, sizeof(Flow));
@@ -65,26 +67,24 @@ static int DetectSNMPCommunityTest(void)
     FAIL_IF_NULL(de_ctx);
 
     /* This rule should match. */
-    s = DetectEngineAppendSig(de_ctx,
-        "alert snmp any any -> any any ("
-        "msg:\"SNMP Test Rule\"; "
-        "snmp.community; content:\"[R0_C@cti!]\"; "
-        "sid:1; rev:1;)");
+    s = DetectEngineAppendSig(de_ctx, "alert snmp any any -> any any ("
+                                      "msg:\"SNMP Test Rule\"; "
+                                      "snmp.community; content:\"[R0_C@cti!]\"; "
+                                      "sid:1; rev:1;)");
     FAIL_IF_NULL(s);
 
     /* This rule should not match. */
-    s = DetectEngineAppendSig(de_ctx,
-        "alert snmp any any -> any any ("
-        "msg:\"SNMP Test Rule\"; "
-        "snmp.community; content:\"private\"; "
-        "sid:2; rev:1;)");
+    s = DetectEngineAppendSig(de_ctx, "alert snmp any any -> any any ("
+                                      "msg:\"SNMP Test Rule\"; "
+                                      "snmp.community; content:\"private\"; "
+                                      "sid:2; rev:1;)");
     FAIL_IF_NULL(s);
 
     SigGroupBuild(de_ctx);
     DetectEngineThreadCtxInit(&tv, (void *)de_ctx, (void *)&det_ctx);
 
-    int r = AppLayerParserParse(NULL, alp_tctx, &f, ALPROTO_SNMP,
-                        STREAM_TOSERVER, request, sizeof(request));
+    int r = AppLayerParserParse(
+            NULL, alp_tctx, &f, ALPROTO_SNMP, STREAM_TOSERVER, request, sizeof(request));
     FAIL_IF(r != 0);
 
     /* Check that we have app-layer state. */
@@ -108,6 +108,5 @@ static int DetectSNMPCommunityTest(void)
 
 static void DetectSNMPCommunityRegisterTests(void)
 {
-    UtRegisterTest("DetectSNMPCommunityTest",
-        DetectSNMPCommunityTest);
+    UtRegisterTest("DetectSNMPCommunityTest", DetectSNMPCommunityTest);
 }
