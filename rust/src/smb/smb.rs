@@ -54,6 +54,7 @@ use crate::smb::session::*;
 use crate::smb::events::*;
 use crate::smb::files::*;
 use crate::smb::smb2_ioctl::*;
+use crate::sys::SCAppLayerEventType;
 
 #[derive(AppLayerFrameType)]
 pub enum SMBFrameType {
@@ -2105,7 +2106,7 @@ fn smb_probe_tcp(flags: u8, slice: &[u8], rdir: *mut u8, begins: bool) -> AppPro
             }
     }
     SCLogDebug!("no smb");
-    unsafe { return ALPROTO_FAILED; }
+    return ALPROTO_FAILED;
 }
 
 // probing confirmation parser
@@ -2205,7 +2206,7 @@ pub unsafe extern "C" fn rs_smb_get_tx_data(
 pub unsafe extern "C" fn rs_smb_state_get_event_info_by_id(
     event_id: u8,
     event_name: *mut *const std::os::raw::c_char,
-    event_type: *mut AppLayerEventType,
+    event_type: *mut SCAppLayerEventType,
 ) -> std::os::raw::c_int {
     SMBEvent::get_event_info_by_id(event_id, event_name, event_type)
 }
@@ -2214,7 +2215,7 @@ pub unsafe extern "C" fn rs_smb_state_get_event_info_by_id(
 pub unsafe extern "C" fn rs_smb_state_get_event_info(
     event_name: *const std::os::raw::c_char,
     event_id: *mut u8,
-    event_type: *mut AppLayerEventType,
+    event_type: *mut SCAppLayerEventType,
 ) -> std::os::raw::c_int {
     SMBEvent::get_event_info(event_name, event_id, event_type)
 }
