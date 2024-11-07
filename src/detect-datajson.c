@@ -1,4 +1,4 @@
-/* Copyright (C) 2018-2024 Open Information Security Foundation
+/* Copyright (C) 2024 Open Information Security Foundation
  *
  * You can copy, redistribute or modify this Program under the terms of
  * the GNU General Public License version 2 as published by the Free
@@ -18,47 +18,37 @@
 /**
  * \file
  *
- *  \author Victor Julien <victor@inliniac.net>
+ *  \author Eric Leblond <el@stamus-networks.com>
  *
- *  Implements the dataset keyword
+ * Based on detect-dataset.c by Victor Julien <victor@inliniac.net>
+ *
+ *  Implements the datajson keyword
  */
 
 #include "suricata-common.h"
-#include "decode.h"
 #include "detect.h"
-#include "threads.h"
 #include "datasets.h"
-#include "detect-dataset.h"
+#include "datasets-json.h"
+#include "detect-datajson.h"
 
 #include "detect-parse.h"
 #include "detect-engine.h"
-#include "detect-engine-mpm.h"
-#include "detect-engine-state.h"
 
 #include "util-debug.h"
-#include "util-print.h"
 #include "util-misc.h"
 #include "util-path.h"
-#include "util-conf.h"
-#include "util-validate.h"
 
-#define DETECT_DATASET_CMD_SET      0
-#define DETECT_DATASET_CMD_UNSET    1
-#define DETECT_DATASET_CMD_ISNOTSET 2
-#define DETECT_DATASET_CMD_ISSET    3
+static int DetectDatajsonSetup(DetectEngineCtx *, Signature *, const char *);
+void DetectDatajsonFree(DetectEngineCtx *, void *);
 
-int DetectDatasetMatch (ThreadVars *, DetectEngineThreadCtx *, Packet *,
-        const Signature *, const SigMatchCtx *);
-static int DetectDatasetSetup (DetectEngineCtx *, Signature *, const char *);
-void DetectDatasetFree (DetectEngineCtx *, void *);
-
-void DetectDatasetRegister (void)
+void DetectDatajsonRegister(void)
 {
-    sigmatch_table[DETECT_DATASET].name = "dataset";
-    sigmatch_table[DETECT_DATASET].desc = "match sticky buffer against datasets (experimental)";
-    sigmatch_table[DETECT_DATASET].url = "/rules/dataset-keywords.html#dataset";
-    sigmatch_table[DETECT_DATASET].Setup = DetectDatasetSetup;
-    sigmatch_table[DETECT_DATASET].Free  = DetectDatasetFree;
+    sigmatch_table[DETECT_DATAJSON].name = "datajson";
+    sigmatch_table[DETECT_DATAJSON].desc =
+            "match sticky buffer against datasets with json extra data (experimental)";
+    sigmatch_table[DETECT_DATAJSON].url = "/rules/dataset-keywords.html#datajson";
+    sigmatch_table[DETECT_DATAJSON].Setup = DetectDatajsonSetup;
+    sigmatch_table[DETECT_DATAJSON].Free = DetectDatajsonFree;
 }
 
 /*
@@ -66,60 +56,53 @@ void DetectDatasetRegister (void)
     0 no match
     -1 can't match
  */
-int DetectDatasetBufferMatch(DetectEngineThreadCtx *det_ctx,
-    const DetectDatasetData *sd,
-    const uint8_t *data, const uint32_t data_len)
+int DetectDatajsonBufferMatch(DetectEngineThreadCtx *det_ctx, const DetectDatajsonData *sd,
+        const uint8_t *data, const uint32_t data_len)
 {
     if (data == NULL || data_len == 0)
         return 0;
 
     switch (sd->cmd) {
-        case DETECT_DATASET_CMD_ISSET: {
-            //PrintRawDataFp(stdout, data, data_len);
-            int r = DatasetLookup(sd->set, data, data_len);
+        case DETECT_DATAJSON_CMD_ISSET: {
+            // PrintRawDataFp(stdout, data, data_len);
+            DataJsonResultType r = DatasetLookupwJson(sd->set, data, data_len);
             SCLogDebug("r %d", r);
-            if (r == 1)
-                return 1;
-            break;
+            if (!r.found)
+                return 0;
+            if (r.json.len > 0) {
+                if ((det_ctx->json_content_len < SIG_JSON_CONTENT_ARRAY_LEN) &&
+                        (r.json.len + strlen(sd->json_key) + 3 < SIG_JSON_CONTENT_ITEM_LEN)) {
+                    snprintf(det_ctx->json_content[det_ctx->json_content_len].json_content,
+                            SIG_JSON_CONTENT_ITEM_LEN, "\"%s\":%s", sd->json_key, r.json.value);
+                    det_ctx->json_content[det_ctx->json_content_len].id = sd->id;
+                    det_ctx->json_content_len++;
+                }
+            }
+            return 1;
         }
-        case DETECT_DATASET_CMD_ISNOTSET: {
-            //PrintRawDataFp(stdout, data, data_len);
-            int r = DatasetLookup(sd->set, data, data_len);
+        case DETECT_DATAJSON_CMD_ISNOTSET: {
+            // PrintRawDataFp(stdout, data, data_len);
+            DataJsonResultType r = DatasetLookupwJson(sd->set, data, data_len);
             SCLogDebug("r %d", r);
-            if (r < 1)
-                return 1;
-            break;
-        }
-        case DETECT_DATASET_CMD_SET: {
-            //PrintRawDataFp(stdout, data, data_len);
-            int r = DatasetAdd(sd->set, data, data_len);
-            if (r == 1)
-                return 1;
-            break;
-        }
-        case DETECT_DATASET_CMD_UNSET: {
-            int r = DatasetRemove(sd->set, data, data_len);
-            if (r == 1)
-                return 1;
-            break;
+            if (r.found)
+                return 0;
+            return 1;
         }
         default:
-            DEBUG_VALIDATE_BUG_ON("unknown dataset command");
+            abort();
     }
     return 0;
 }
 
-static int DetectDatasetParse(const char *str, char *cmd, int cmd_len, char *name, int name_len,
-        enum DatasetTypes *type, char *load, size_t load_size, char *save, size_t save_size,
-        uint64_t *memcap, uint32_t *hashsize)
+static int DetectDatajsonParse(const char *str, char *cmd, int cmd_len, char *name, int name_len,
+        enum DatasetTypes *type, char *load, size_t load_size, uint64_t *memcap, uint32_t *hashsize,
+        char *json_key, size_t json_key_size)
 {
     bool cmd_set = false;
     bool name_set = false;
     bool load_set = false;
-    bool save_set = false;
-    bool state_set = false;
 
-    char copy[strlen(str)+1];
+    char copy[strlen(str) + 1];
     strlcpy(copy, str, sizeof(copy));
     char *xsaveptr = NULL;
     char *key = strtok_r(copy, ",", &xsaveptr);
@@ -179,14 +162,6 @@ static int DetectDatasetParse(const char *str, char *cmd, int cmd_len, char *nam
                     return -1;
                 }
 
-            } else if (strcmp(key, "save") == 0) {
-                if (save_set) {
-                    SCLogWarning("'save' can only appear once");
-                    return -1;
-                }
-                SCLogDebug("save %s", val);
-                strlcpy(save, val, save_size);
-                save_set = true;
             } else if (strcmp(key, "load") == 0) {
                 if (load_set) {
                     SCLogWarning("'load' can only appear once");
@@ -195,16 +170,15 @@ static int DetectDatasetParse(const char *str, char *cmd, int cmd_len, char *nam
                 SCLogDebug("load %s", val);
                 strlcpy(load, val, load_size);
                 load_set = true;
-            } else if (strcmp(key, "state") == 0) {
-                if (state_set) {
-                    SCLogWarning("'state' can only appear once");
+            } else if (strcmp(key, "key") == 0) {
+                if (strlen(key) > json_key_size) {
+                    SCLogWarning("'key' value too long (limit is %" PRIu64 ")", json_key_size);
                     return -1;
                 }
-                SCLogDebug("state %s", val);
-                strlcpy(load, val, load_size);
-                strlcpy(save, val, save_size);
-                state_set = true;
+                strlcpy(json_key, val, json_key_size);
+                load_set = true;
             }
+
             if (strcmp(key, "memcap") == 0) {
                 if (ParseSizeStringU64(val, memcap) < 0) {
                     SCLogWarning("invalid value for memcap: %s,"
@@ -227,11 +201,6 @@ static int DetectDatasetParse(const char *str, char *cmd, int cmd_len, char *nam
 
     next:
         key = strtok_r(NULL, ",", &xsaveptr);
-    }
-
-    if ((load_set || save_set) && state_set) {
-        SCLogWarning("'state' can not be mixed with 'load' and 'save'");
-        return -1;
     }
 
     /* Trim trailing whitespace. */
@@ -264,10 +233,10 @@ static void GetDirName(const char *in, char *out, size_t outs)
     char *dir = dirname(tmp);
     BUG_ON(dir == NULL);
     strlcpy(out, dir, outs);
+    return;
 }
 
-static int SetupLoadPath(const DetectEngineCtx *de_ctx,
-        char *load, size_t load_size)
+static int SetupLoadPath(const DetectEngineCtx *de_ctx, char *load, size_t load_size)
 {
     SCLogDebug("load %s", load);
 
@@ -309,142 +278,90 @@ static int SetupLoadPath(const DetectEngineCtx *de_ctx,
     return 0;
 }
 
-static int SetupSavePath(const DetectEngineCtx *de_ctx,
-        char *save, size_t save_size)
+int DetectDatajsonSetup(DetectEngineCtx *de_ctx, Signature *s, const char *rawstr)
 {
-    SCLogDebug("save %s", save);
-
-    int allow_save = 1;
-    if (ConfGetBool("datasets.rules.allow-write", &allow_save)) {
-        if (!allow_save) {
-            SCLogError("Rules containing save/state datasets have been disabled");
-            return -1;
-        }
-    }
-
-    int allow_absolute = 0;
-    (void)ConfGetBool("datasets.rules.allow-absolute-filenames", &allow_absolute);
-    if (allow_absolute) {
-        SCLogNotice("Allowing absolute filename for dataset rule: %s", save);
-    } else {
-        if (PathIsAbsolute(save)) {
-            SCLogError("Absolute paths not allowed: %s", save);
-            return -1;
-        }
-
-        if (SCPathContainsTraversal(save)) {
-            SCLogError("Directory traversals not allowed: %s", save);
-            return -1;
-        }
-    }
-
-    // data dir
-    const char *dir = ConfigGetDataDirectory();
-    BUG_ON(dir == NULL); // should not be able to fail
-    char path[PATH_MAX];
-    if (snprintf(path, sizeof(path), "%s/%s", dir, save) >= (int)sizeof(path)) // TODO windows path
-        return -1;
-
-    /* TODO check if location exists and is writable */
-
-    strlcpy(save, path, save_size);
-
-    return 0;
-}
-
-int DetectDatasetSetup (DetectEngineCtx *de_ctx, Signature *s, const char *rawstr)
-{
-    DetectDatasetData *cd = NULL;
+    DetectDatajsonData *cd = NULL;
+    SigMatch *sm = NULL;
     uint8_t cmd = 0;
     uint64_t memcap = 0;
     uint32_t hashsize = 0;
     char cmd_str[16] = "", name[DATASET_NAME_MAX_LEN + 1] = "";
     enum DatasetTypes type = DATASET_TYPE_NOTSET;
     char load[PATH_MAX] = "";
-    char save[PATH_MAX] = "";
+    char json_key[SIG_JSON_CONTENT_KEY_LEN] = "";
+    size_t json_key_size = SIG_JSON_CONTENT_KEY_LEN;
 
     if (DetectBufferGetActiveList(de_ctx, s) == -1) {
-        SCLogError("datasets are only supported for sticky buffers");
+        SCLogError("datajson is only supported for sticky buffers");
         SCReturnInt(-1);
     }
 
     int list = s->init_data->list;
     if (list == DETECT_SM_LIST_NOTSET) {
-        SCLogError("datasets are only supported for sticky buffers");
+        SCLogError("datajson is only supported for sticky buffers");
         SCReturnInt(-1);
     }
 
-    if (!DetectDatasetParse(rawstr, cmd_str, sizeof(cmd_str), name, sizeof(name), &type, load,
-                sizeof(load), save, sizeof(save), &memcap, &hashsize)) {
+    if (!DetectDatajsonParse(rawstr, cmd_str, sizeof(cmd_str), name, sizeof(name), &type, load,
+                sizeof(load), &memcap, &hashsize, json_key, json_key_size)) {
         return -1;
     }
 
-    if (strcmp(cmd_str,"isset") == 0) {
-        cmd = DETECT_DATASET_CMD_ISSET;
-    } else if (strcmp(cmd_str,"isnotset") == 0) {
-        cmd = DETECT_DATASET_CMD_ISNOTSET;
-    } else if (strcmp(cmd_str,"set") == 0) {
-        cmd = DETECT_DATASET_CMD_SET;
-    } else if (strcmp(cmd_str,"unset") == 0) {
-        cmd = DETECT_DATASET_CMD_UNSET;
+    if (strcmp(cmd_str, "isset") == 0) {
+        cmd = DETECT_DATAJSON_CMD_ISSET;
+    } else if (strcmp(cmd_str, "isnotset") == 0) {
+        cmd = DETECT_DATAJSON_CMD_ISNOTSET;
     } else {
-        SCLogError("dataset action \"%s\" is not supported.", cmd_str);
+        SCLogError("datajson action \"%s\" is not supported.", cmd_str);
         return -1;
     }
 
-    /* if just 'load' is set, we load data from the same dir as the
-     * rule file. If load+save is used, we use data dir */
-    if (strlen(save) == 0 && strlen(load) != 0) {
+    if (strlen(load) != 0) {
         if (SetupLoadPath(de_ctx, load, sizeof(load)) != 0)
             return -1;
-    /* if just 'save' is set, we use either full path or the
-     * data-dir */
-    } else if (strlen(save) != 0 && strlen(load) == 0) {
-        if (SetupSavePath(de_ctx, save, sizeof(save)) != 0)
-            return -1;
-    /* use 'save' logic for 'state', but put the resulting
-     * path into 'load' as well. */
-    } else if (strlen(save) != 0 && strlen(load) != 0 &&
-            strcmp(save, load) == 0) {
-        if (SetupSavePath(de_ctx, save, sizeof(save)) != 0)
-            return -1;
-        strlcpy(load, save, sizeof(load));
+    }
+
+    if (strlen(json_key) == 0) {
+        SCLogError("datajson needs a key parameter");
+        return -1;
     }
 
     SCLogDebug("name '%s' load '%s' save '%s'", name, load, save);
-    Dataset *set = DatasetGet(name, type, save, load, memcap, hashsize);
+    Dataset *set = DatasetJsonGet(name, type, load, memcap, hashsize);
     if (set == NULL) {
-        SCLogError("failed to set up dataset '%s'.", name);
+        SCLogError("failed to set up datajson '%s'.", name);
+        return -1;
+    }
+    if (set->hash && SC_ATOMIC_GET(set->hash->memcap_reached)) {
+        SCLogError("datajson too large for set memcap");
         return -1;
     }
 
-    cd = SCCalloc(1, sizeof(DetectDatasetData));
+    cd = SCCalloc(1, sizeof(DetectDatajsonData));
     if (unlikely(cd == NULL))
         goto error;
 
     cd->set = set;
     cd->cmd = cmd;
+    strlcpy(cd->json_key, json_key, json_key_size);
+    cd->id = s;
 
-    SCLogDebug("cmd %s, name %s",
-        cmd_str, strlen(name) ? name : "(none)");
+    SCLogDebug("cmd %s, name %s", cmd_str, strlen(name) ? name : "(none)");
 
-    /* Okay so far so good, lets get this into a SigMatch
-     * and put it in the Signature. */
-
-    if (SigMatchAppendSMToList(de_ctx, s, DETECT_DATASET, (SigMatchCtx *)cd, list) == NULL) {
-        goto error;
-    }
+    SigMatchAppendSMToList(de_ctx, s, DETECT_DATAJSON, (SigMatchCtx *)cd, list);
     return 0;
 
 error:
     if (cd != NULL)
         SCFree(cd);
+    if (sm != NULL)
+        SCFree(sm);
     return -1;
 }
 
-void DetectDatasetFree (DetectEngineCtx *de_ctx, void *ptr)
+void DetectDatajsonFree(DetectEngineCtx *de_ctx, void *ptr)
 {
-    DetectDatasetData *fd = (DetectDatasetData *)ptr;
+    DetectDatajsonData *fd = (DetectDatajsonData *)ptr;
     if (fd == NULL)
         return;
 
