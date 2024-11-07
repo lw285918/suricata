@@ -37,7 +37,8 @@
 #include "util-spm.h"
 #include "util-hash.h"
 #include "util-hashlist.h"
-#include "util-radix-tree.h"
+#include "util-radix4-tree.h"
+#include "util-radix6-tree.h"
 #include "util-file.h"
 #include "reputation.h"
 
@@ -52,9 +53,8 @@
 // tx_id value to use when there is no transaction
 #define PACKET_ALERT_NOTX UINT64_MAX
 
-/* forward declarations for the structures from detect-engine-sigorder.h */
+/* forward declaration for sigorder logic in detect-engine-sigorder.[ch] */
 struct SCSigOrderFunc_;
-struct SCSigSignatureWrapper_;
 
 /* Forward declarations for structures from Rust. */
 typedef struct SCDetectRequiresStatus SCDetectRequiresStatus;
@@ -766,8 +766,8 @@ typedef struct SCFPSupportSMList_ {
 /** \brief IP only rules matching ctx. */
 typedef struct DetectEngineIPOnlyCtx_ {
     /* Lookup trees */
-    SCRadixTree *tree_ipv4src, *tree_ipv4dst;
-    SCRadixTree *tree_ipv6src, *tree_ipv6dst;
+    SCRadix4Tree tree_ipv4src, tree_ipv4dst;
+    SCRadix6Tree tree_ipv6src, tree_ipv6dst;
 
     /* Used to build the radix trees */
     IPOnlyCIDRItem *ip_src, *ip_dst;
