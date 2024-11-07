@@ -317,6 +317,7 @@ noinst_HEADERS = \
 	feature.h \
 	flow-bit.h \
 	flow-bypass.h \
+	flow-callbacks.h \
 	flow.h \
 	flow-hash.h \
 	flow-manager.h \
@@ -437,6 +438,8 @@ noinst_HEADERS = \
 	suricata-common.h \
 	suricata.h \
 	suricata-plugin.h \
+	thread-callbacks.h \
+	thread-storage.h \
 	threads-debug.h \
 	threads.h \
 	threads-profile.h \
@@ -875,6 +878,7 @@ libsuricata_c_a_SOURCES = \
 	feature.c \
 	flow-bit.c \
 	flow-bypass.c \
+	flow-callbacks.c \
 	flow.c \
 	flow-hash.c \
 	flow-manager.c \
@@ -988,6 +992,8 @@ libsuricata_c_a_SOURCES = \
 	stream-tcp-sack.c \
 	stream-tcp-util.c \
 	suricata.c \
+	thread-callbacks.c \
+	thread-storage.c \
 	threads.c \
 	tm-modules.c \
 	tmqh-flow.c \
@@ -1168,6 +1174,12 @@ install-headers:
 	for header in $(noinst_HEADERS); do \
 		$(INSTALL_DATA) $$header "$(DESTDIR)${includedir}/suricata"; \
 	done
+	if test -e ../rust/dist/rust-bindings.h; then \
+		$(INSTALL_DATA) ../rust/dist/rust-bindings.h "$(DESTDIR)${includedir}/suricata"; \
+	fi
+	if test -e ../rust/gen/rust-bindings.h; then \
+		$(INSTALL_DATA) ../rust/gen/rust-bindings.h "$(DESTDIR)${includedir}/suricata"; \
+	fi
 
 # Until we can remove autoconf.h from our headers, we need to to
 # provide this for library/plugin users.
