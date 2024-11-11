@@ -82,6 +82,7 @@
 #include "app-layer-parser.h"
 #include "output-filestore.h"
 #include "output-json-arp.h"
+#include "util-plugin.h"
 
 typedef struct RootLogger_ {
     OutputLogFunc LogFunc;
@@ -835,7 +836,7 @@ void TmModuleLoggerRegister(void)
 
 EveJsonSimpleAppLayerLogger *SCEveJsonSimpleGetLogger(AppProto alproto)
 {
-    if (alproto < ALPROTO_MAX) {
+    if (alproto < AlprotoMax) {
         return &simple_json_applayer_loggers[alproto];
     }
     return NULL;
@@ -857,7 +858,7 @@ static void RegisterSimpleJsonApplayerLogger(
  */
 void OutputRegisterRootLoggers(void)
 {
-    simple_json_applayer_loggers = SCCalloc(ALPROTO_MAX, sizeof(EveJsonSimpleAppLayerLogger));
+    simple_json_applayer_loggers = SCCalloc(AlprotoMax, sizeof(EveJsonSimpleAppLayerLogger));
     if (unlikely(simple_json_applayer_loggers == NULL)) {
         FatalError("Failed to allocate simple_json_applayer_loggers");
     }
@@ -1105,4 +1106,21 @@ void OutputRegisterLoggers(void)
     }
     /* ARP JSON logger */
     JsonArpLogRegister();
+
+#ifdef HAVE_PLUGINS
+    for (size_t i = 0; i < app_layer_plugins_nb; i++) {
+        SCAppLayerPlugin *app_layer_plugin = SCPluginFindAppLayerByIndex(i);
+        if (app_layer_plugin == NULL) {
+            break;
+        }
+
+        OutputRegisterTxSubModule(LOGGER_JSON_TX, "eve-log", app_layer_plugin->logname,
+                app_layer_plugin->confname, OutputJsonLogInitSub,
+                (AppProto)(ALPROTO_MAX_STATIC + i), JsonGenericDirFlowLogger, JsonLogThreadInit,
+                JsonLogThreadDeinit);
+        SCLogNotice("%s JSON logger registered.", app_layer_plugin->name);
+        RegisterSimpleJsonApplayerLogger((AppProto)(ALPROTO_MAX_STATIC + i),
+                (EveJsonSimpleTxLogFunc)app_layer_plugin->Logger, NULL);
+    }
+#endif
 }

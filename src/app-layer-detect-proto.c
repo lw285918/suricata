@@ -67,8 +67,6 @@
 
 typedef struct AppLayerProtoDetectProbingParserElement_ {
     AppProto alproto;
-    /* \todo calculate at runtime and get rid of this var */
-    uint32_t alproto_mask;
     /* the min length of data that has to be supplied to invoke the parser */
     uint16_t min_depth;
     /* the max length of data after which this parser won't be invoked */
@@ -89,8 +87,6 @@ typedef struct AppLayerProtoDetectProbingParserPort_ {
     /* wether to use this probing parser port-based */
     // WebSocket has this set to false as it only works with protocol change
     bool use_ports;
-
-    uint32_t alproto_mask;
 
     /* the max depth for all the probing parsers registered for this port */
     uint16_t dp_max_depth;
@@ -158,8 +154,15 @@ typedef struct AppLayerProtoDetectCtx_ {
 
     /* Indicates the protocols that have registered themselves
      * for protocol detection.  This table is independent of the
-     * ipproto. */
-    const char *alproto_names[ALPROTO_MAX];
+     * ipproto. It should be allocated to contain ALPROTO_MAX
+     * protocols. */
+    const char **alproto_names;
+
+    /* Protocol expectations, like ftp-data on tcp.
+     * It should be allocated to contain ALPROTO_MAX
+     * app-layer protocols. For each protocol, an iptype
+     * is referenced (or 0 if there is no expectation). */
+    uint8_t *expectation_proto;
 } AppLayerProtoDetectCtx;
 
 typedef struct AppLayerProtoDetectAliases_ {
@@ -285,7 +288,7 @@ static inline int PMGetProtoInspect(AppLayerProtoDetectThreadCtx *tctx,
     }
 
     /* alproto bit field */
-    uint8_t pm_results_bf[(ALPROTO_MAX / 8) + 1];
+    uint8_t pm_results_bf[(AlprotoMax / 8) + 1];
     memset(pm_results_bf, 0, sizeof(pm_results_bf));
 
     /* loop through unique pattern id's. Can't use search_cnt here,
@@ -317,7 +320,7 @@ static inline int PMGetProtoInspect(AppLayerProtoDetectThreadCtx *tctx,
 /** \internal
  *  \brief Run Pattern Sigs against buffer
  *  \param direction direction for the patterns
- *  \param pm_results[out] AppProto array of size ALPROTO_MAX */
+ *  \param pm_results[out] AppProto array of size AlprotoMax */
 static AppProto AppLayerProtoDetectPMGetProto(AppLayerProtoDetectThreadCtx *tctx, Flow *f,
         const uint8_t *buf, uint32_t buflen, uint8_t flags, AppProto *pm_results, bool *rflow)
 {
@@ -473,11 +476,20 @@ static AppProto AppLayerProtoDetectPEGetProto(Flow *f, uint8_t flags)
 }
 
 static inline AppProto PPGetProto(const AppLayerProtoDetectProbingParserElement *pe, Flow *f,
-        uint8_t flags, const uint8_t *buf, uint32_t buflen, uint32_t *alproto_masks, uint8_t *rdir)
+        uint8_t flags, const uint8_t *buf, uint32_t buflen, uint32_t *alproto_masks, uint8_t *rdir,
+        uint8_t *nb_tried)
 {
     while (pe != NULL) {
-        if ((buflen < pe->min_depth)  ||
-            (alproto_masks[0] & pe->alproto_mask)) {
+        // callers make alproto_masks and nb_tried are either both defined or both NULL
+        if (alproto_masks != NULL) {
+            DEBUG_VALIDATE_BUG_ON(*nb_tried >= 32);
+            if (buflen < pe->min_depth || (alproto_masks[0] & BIT_U32(*nb_tried))) {
+                // skip if already failed once
+                pe = pe->next;
+                *nb_tried = *nb_tried + 1;
+                continue;
+            }
+        } else if (buflen < pe->min_depth) {
             pe = pe->next;
             continue;
         }
@@ -491,9 +503,12 @@ static inline AppProto PPGetProto(const AppLayerProtoDetectProbingParserElement 
         if (AppProtoIsValid(alproto)) {
             SCReturnUInt(alproto);
         }
-        if (alproto == ALPROTO_FAILED ||
-            (pe->max_depth != 0 && buflen > pe->max_depth)) {
-            alproto_masks[0] |= pe->alproto_mask;
+        if (alproto_masks != NULL) {
+            if ((alproto == ALPROTO_FAILED || (pe->max_depth != 0 && buflen > pe->max_depth))) {
+                // This PE failed, mask it from now on
+                alproto_masks[0] |= BIT_U32(*nb_tried);
+            }
+            *nb_tried = *nb_tried + 1;
         }
         pe = pe->next;
     }
@@ -517,8 +532,20 @@ static AppProto AppLayerProtoDetectPPGetProto(Flow *f, const uint8_t *buf, uint3
     const AppLayerProtoDetectProbingParserElement *pe1 = NULL;
     const AppLayerProtoDetectProbingParserElement *pe2 = NULL;
     AppProto alproto = ALPROTO_UNKNOWN;
+    // number of tried protocols :
+    // used against alproto_masks to see if al tried protocols failed
+    // Instead of keeping a bitmask for all protocols, we
+    // use only the protocols relevant to this flow, so as to
+    // have alproto_masks a u32 but we have more than 32 alprotos
+    // in Suricata, but we do not allow more than 32 probing parsers
+    // on one flow.
+    // alproto_masks is consistent throughout different calls here
+    // from different packets in the flow.
+    // We can have up to 4 calls to PPGetProto with a mask :
+    // destination port (probing parser), source port,
+    // and again with the reversed flow in case of midstream.
+    uint8_t nb_tried = 0;
     uint32_t *alproto_masks = NULL;
-    uint32_t mask = 0;
     uint8_t idir = (flags & (STREAM_TOSERVER | STREAM_TOCLIENT));
     uint8_t dir = idir;
     uint16_t dp = f->protodetect_dp ? f->protodetect_dp : FLOW_GET_DP(f);
@@ -600,26 +627,22 @@ again_midstream:
 
     /* run the parser(s): always call with original direction */
     uint8_t rdir = 0;
-    alproto = PPGetProto(pe0, f, flags, buf, buflen, alproto_masks, &rdir);
+    // pe0 can change based on the flow state, do not use mask for it
+    alproto = PPGetProto(pe0, f, flags, buf, buflen, NULL, &rdir, NULL);
     if (AppProtoIsValid(alproto))
         goto end;
-    alproto = PPGetProto(pe1, f, flags, buf, buflen, alproto_masks, &rdir);
+    alproto = PPGetProto(pe1, f, flags, buf, buflen, alproto_masks, &rdir, &nb_tried);
     if (AppProtoIsValid(alproto))
         goto end;
-    alproto = PPGetProto(pe2, f, flags, buf, buflen, alproto_masks, &rdir);
+    alproto = PPGetProto(pe2, f, flags, buf, buflen, alproto_masks, &rdir, &nb_tried);
     if (AppProtoIsValid(alproto))
         goto end;
 
     /* get the mask we need for this direction */
     if (dir == idir) {
-        if (pp_port_dp && pp_port_sp)
-            mask = pp_port_dp->alproto_mask|pp_port_sp->alproto_mask;
-        else if (pp_port_dp)
-            mask = pp_port_dp->alproto_mask;
-        else if (pp_port_sp)
-            mask = pp_port_sp->alproto_mask;
-
-        if (alproto_masks[0] == mask) {
+        // if we tried 3 protocols, we set probing parsing done if
+        // alproto_masks[0] = 7 = 0b111 = BIT_U32(3) - 1 = 1<<3 - 1
+        if (alproto_masks[0] == BIT_U32(nb_tried) - 1) {
             FLOW_SET_PP_DONE(f, dir);
             SCLogDebug("%s, mask is now %08x, needed %08x, so done",
                     (dir == STREAM_TOSERVER) ? "toserver":"toclient",
@@ -681,17 +704,6 @@ static void AppLayerProtoDetectPPGetIpprotos(AppProto alproto,
     }
 
     SCReturn;
-}
-
-static uint32_t AppLayerProtoDetectProbingParserGetMask(AppProto alproto)
-{
-    SCEnter();
-
-    if (!(alproto > ALPROTO_UNKNOWN && alproto < ALPROTO_FAILED)) {
-        FatalError("Unknown protocol detected - %u", alproto);
-    }
-
-    SCReturnUInt(BIT_U32(alproto));
 }
 
 static AppLayerProtoDetectProbingParserElement *AppLayerProtoDetectProbingParserElementAlloc(void)
@@ -787,7 +799,6 @@ static AppLayerProtoDetectProbingParserElement *AppLayerProtoDetectProbingParser
     AppLayerProtoDetectProbingParserElement *pe = AppLayerProtoDetectProbingParserElementAlloc();
 
     pe->alproto = alproto;
-    pe->alproto_mask = AppLayerProtoDetectProbingParserGetMask(alproto);
     pe->min_depth = min_depth;
     pe->max_depth = max_depth;
     pe->next = NULL;
@@ -797,7 +808,7 @@ static AppLayerProtoDetectProbingParserElement *AppLayerProtoDetectProbingParser
                    "register the probing parser.  min_depth >= max_depth");
         goto error;
     }
-    if (alproto <= ALPROTO_UNKNOWN || alproto >= ALPROTO_MAX) {
+    if (alproto <= ALPROTO_UNKNOWN || alproto >= AlprotoMax) {
         SCLogError("Invalid arguments sent to register "
                    "the probing parser.  Invalid alproto - %d",
                 alproto);
@@ -818,7 +829,6 @@ AppLayerProtoDetectProbingParserElementDuplicate(AppLayerProtoDetectProbingParse
     AppLayerProtoDetectProbingParserElement *new_pe = AppLayerProtoDetectProbingParserElementAlloc();
 
     new_pe->alproto = pe->alproto;
-    new_pe->alproto_mask = pe->alproto_mask;
     new_pe->min_depth = pe->min_depth;
     new_pe->max_depth = pe->max_depth;
     new_pe->ProbingParserTs = pe->ProbingParserTs;
@@ -1023,7 +1033,6 @@ static void AppLayerProtoDetectInsertNewProbingParser(AppLayerProtoDetectProbing
                 AppLayerProtoDetectProbingParserElement *dup_pe =
                     AppLayerProtoDetectProbingParserElementDuplicate(zero_pe);
                 AppLayerProtoDetectProbingParserElementAppend(&curr_port->dp, dup_pe);
-                curr_port->alproto_mask |= dup_pe->alproto_mask;
             }
 
             zero_pe = zero_port->sp;
@@ -1040,7 +1049,6 @@ static void AppLayerProtoDetectInsertNewProbingParser(AppLayerProtoDetectProbing
                 AppLayerProtoDetectProbingParserElement *dup_pe =
                     AppLayerProtoDetectProbingParserElementDuplicate(zero_pe);
                 AppLayerProtoDetectProbingParserElementAppend(&curr_port->sp, dup_pe);
-                curr_port->alproto_mask |= dup_pe->alproto_mask;
             }
         } /* if (zero_port != NULL) */
     } /* if (curr_port == NULL) */
@@ -1081,7 +1089,6 @@ static void AppLayerProtoDetectInsertNewProbingParser(AppLayerProtoDetectProbing
             curr_port->dp_max_depth < new_pe->max_depth) {
             curr_port->dp_max_depth = new_pe->max_depth;
         }
-        curr_port->alproto_mask |= new_pe->alproto_mask;
         head_pe = &curr_port->dp;
     } else {
         curr_pe->ProbingParserTs = ProbingParser2;
@@ -1094,7 +1101,6 @@ static void AppLayerProtoDetectInsertNewProbingParser(AppLayerProtoDetectProbing
             curr_port->sp_max_depth < new_pe->max_depth) {
             curr_port->sp_max_depth = new_pe->max_depth;
         }
-        curr_port->alproto_mask |= new_pe->alproto_mask;
         head_pe = &curr_port->sp;
     }
     AppLayerProtoDetectProbingParserElementAppend(head_pe, new_pe);
@@ -1112,9 +1118,8 @@ static void AppLayerProtoDetectInsertNewProbingParser(AppLayerProtoDetectProbing
                     temp_port->dp_max_depth < curr_pe->max_depth) {
                     temp_port->dp_max_depth = curr_pe->max_depth;
                 }
-                AppLayerProtoDetectProbingParserElementAppend(&temp_port->dp,
-                                                              AppLayerProtoDetectProbingParserElementDuplicate(curr_pe));
-                temp_port->alproto_mask |= curr_pe->alproto_mask;
+                AppLayerProtoDetectProbingParserElementAppend(
+                        &temp_port->dp, AppLayerProtoDetectProbingParserElementDuplicate(curr_pe));
             } else {
                 if (temp_port->sp == NULL)
                     temp_port->sp_max_depth = curr_pe->max_depth;
@@ -1124,9 +1129,8 @@ static void AppLayerProtoDetectInsertNewProbingParser(AppLayerProtoDetectProbing
                     temp_port->sp_max_depth < curr_pe->max_depth) {
                     temp_port->sp_max_depth = curr_pe->max_depth;
                 }
-                AppLayerProtoDetectProbingParserElementAppend(&temp_port->sp,
-                                                              AppLayerProtoDetectProbingParserElementDuplicate(curr_pe));
-                temp_port->alproto_mask |= curr_pe->alproto_mask;
+                AppLayerProtoDetectProbingParserElementAppend(
+                        &temp_port->sp, AppLayerProtoDetectProbingParserElementDuplicate(curr_pe));
             }
             temp_port = temp_port->next;
         } /* while */
@@ -1404,7 +1408,7 @@ AppProto AppLayerProtoDetectGetProto(AppLayerProtoDetectThreadCtx *tctx, Flow *f
     AppProto pm_alproto = ALPROTO_UNKNOWN;
 
     if (!FLOW_IS_PM_DONE(f, flags)) {
-        AppProto pm_results[ALPROTO_MAX];
+        AppProto pm_results[AlprotoMax];
         uint16_t pm_matches = AppLayerProtoDetectPMGetProto(
                 tctx, f, buf, buflen, flags, pm_results, reverse_flow);
         if (pm_matches > 0) {
@@ -1718,6 +1722,15 @@ int AppLayerProtoDetectSetup(void)
         }
     }
 
+    alpd_ctx.alproto_names = SCCalloc(AlprotoMax, sizeof(char *));
+    if (unlikely(alpd_ctx.alproto_names == NULL)) {
+        FatalError("Unable to alloc alproto_names.");
+    }
+    // to realloc when dynamic protos are added
+    alpd_ctx.expectation_proto = SCCalloc(AlprotoMax, sizeof(uint8_t));
+    if (unlikely(alpd_ctx.expectation_proto == NULL)) {
+        FatalError("Unable to alloc expectation_proto.");
+    }
     AppLayerExpectationSetup();
 
     SCReturnInt(0);
@@ -1749,6 +1762,11 @@ int AppLayerProtoDetectDeSetup(void)
         }
     }
 
+    SCFree(alpd_ctx.alproto_names);
+    alpd_ctx.alproto_names = NULL;
+    SCFree(alpd_ctx.expectation_proto);
+    alpd_ctx.expectation_proto = NULL;
+
     SpmDestroyGlobalThreadCtx(alpd_ctx.spm_global_thread_ctx);
 
     AppLayerProtoDetectFreeAliases();
@@ -1762,6 +1780,7 @@ void AppLayerProtoDetectRegisterProtocol(AppProto alproto, const char *alproto_n
 {
     SCEnter();
 
+    // should have just been realloced when dynamic protos is added
     if (alpd_ctx.alproto_names[alproto] == NULL)
         alpd_ctx.alproto_names[alproto] = alproto_name;
 
@@ -2068,7 +2087,7 @@ AppProto AppLayerProtoDetectGetProtoByName(const char *alproto_name)
 
     AppProto a;
     AppProto b = StringToAppProto(alproto_name);
-    for (a = 0; a < ALPROTO_MAX; a++) {
+    for (a = 0; a < AlprotoMax; a++) {
         if (alpd_ctx.alproto_names[a] != NULL && AppProtoEquals(b, a)) {
             // That means return HTTP_ANY if HTTP1 or HTTP2 is enabled
             SCReturnCT(b, "AppProto");
@@ -2099,11 +2118,11 @@ void AppLayerProtoDetectSupportedAppProtocols(AppProto *alprotos)
 {
     SCEnter();
 
-    memset(alprotos, 0, ALPROTO_MAX * sizeof(AppProto));
+    memset(alprotos, 0, AlprotoMax * sizeof(AppProto));
 
     int alproto;
 
-    for (alproto = 0; alproto != ALPROTO_MAX; alproto++) {
+    for (alproto = 0; alproto != AlprotoMax; alproto++) {
         if (alpd_ctx.alproto_names[alproto] != NULL)
             alprotos[alproto] = 1;
     }
@@ -2111,27 +2130,25 @@ void AppLayerProtoDetectSupportedAppProtocols(AppProto *alprotos)
     SCReturn;
 }
 
-uint8_t expectation_proto[ALPROTO_MAX];
-
 static void AppLayerProtoDetectPEGetIpprotos(AppProto alproto,
                                              uint8_t *ipprotos)
 {
-    if (expectation_proto[alproto] == IPPROTO_TCP) {
+    if (alpd_ctx.expectation_proto[alproto] == IPPROTO_TCP) {
         ipprotos[IPPROTO_TCP / 8] |= 1 << (IPPROTO_TCP % 8);
     }
-    if (expectation_proto[alproto] == IPPROTO_UDP) {
+    if (alpd_ctx.expectation_proto[alproto] == IPPROTO_UDP) {
         ipprotos[IPPROTO_UDP / 8] |= 1 << (IPPROTO_UDP % 8);
     }
 }
 
 void AppLayerRegisterExpectationProto(uint8_t proto, AppProto alproto)
 {
-    if (expectation_proto[alproto]) {
-        if (proto != expectation_proto[alproto]) {
+    if (alpd_ctx.expectation_proto[alproto]) {
+        if (proto != alpd_ctx.expectation_proto[alproto]) {
             SCLogError("Expectation on 2 IP protocols are not supported");
         }
     }
-    expectation_proto[alproto] = proto;
+    alpd_ctx.expectation_proto[alproto] = proto;
 }
 
 /***** Unittests *****/
@@ -2209,7 +2226,7 @@ static int AppLayerProtoDetectTest03(void)
     AppLayerProtoDetectSetup();
 
     uint8_t l7data[] = "HTTP/1.1 200 OK\r\nServer: Apache/1.0\r\n\r\n";
-    AppProto pm_results[ALPROTO_MAX];
+    AppProto pm_results[AlprotoMax];
     memset(pm_results, 0, sizeof(pm_results));
     Flow f;
     memset(&f, 0x00, sizeof(f));
@@ -2256,7 +2273,7 @@ static int AppLayerProtoDetectTest04(void)
     uint8_t l7data[] = "HTTP/1.1 200 OK\r\nServer: Apache/1.0\r\n\r\n";
     Flow f;
     memset(&f, 0x00, sizeof(f));
-    AppProto pm_results[ALPROTO_MAX];
+    AppProto pm_results[AlprotoMax];
     memset(pm_results, 0, sizeof(pm_results));
     f.protomap = FlowGetProtoMapping(IPPROTO_TCP);
 
@@ -2294,7 +2311,7 @@ static int AppLayerProtoDetectTest05(void)
     AppLayerProtoDetectSetup();
 
     uint8_t l7data[] = "HTTP/1.1 200 OK\r\nServer: Apache/1.0\r\n\r\n<HTML><BODY>Blahblah</BODY></HTML>";
-    AppProto pm_results[ALPROTO_MAX];
+    AppProto pm_results[AlprotoMax];
     memset(pm_results, 0, sizeof(pm_results));
     Flow f;
     memset(&f, 0x00, sizeof(f));
@@ -2338,7 +2355,7 @@ static int AppLayerProtoDetectTest06(void)
     AppLayerProtoDetectSetup();
 
     uint8_t l7data[] = "220 Welcome to the OISF FTP server\r\n";
-    AppProto pm_results[ALPROTO_MAX];
+    AppProto pm_results[AlprotoMax];
     memset(pm_results, 0, sizeof(pm_results));
     Flow f;
     memset(&f, 0x00, sizeof(f));
@@ -2384,7 +2401,7 @@ static int AppLayerProtoDetectTest07(void)
     Flow f;
     memset(&f, 0x00, sizeof(f));
     f.protomap = FlowGetProtoMapping(IPPROTO_TCP);
-    AppProto pm_results[ALPROTO_MAX];
+    AppProto pm_results[AlprotoMax];
     memset(pm_results, 0, sizeof(pm_results));
 
     const char *buf = "HTTP";
@@ -2438,7 +2455,7 @@ static int AppLayerProtoDetectTest08(void)
         0x20, 0x4c, 0x4d, 0x20, 0x30, 0x2e, 0x31, 0x32,
         0x00
     };
-    AppProto pm_results[ALPROTO_MAX];
+    AppProto pm_results[AlprotoMax];
     memset(pm_results, 0, sizeof(pm_results));
     Flow f;
     memset(&f, 0x00, sizeof(f));
@@ -2493,7 +2510,7 @@ static int AppLayerProtoDetectTest09(void)
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x02, 0x02
     };
-    AppProto pm_results[ALPROTO_MAX];
+    AppProto pm_results[AlprotoMax];
     memset(pm_results, 0, sizeof(pm_results));
     Flow f;
     memset(&f, 0x00, sizeof(f));
@@ -2543,7 +2560,7 @@ static int AppLayerProtoDetectTest10(void)
         0xeb, 0x1c, 0xc9, 0x11, 0x9f, 0xe8, 0x08, 0x00,
         0x2b, 0x10, 0x48, 0x60, 0x02, 0x00, 0x00, 0x00
     };
-    AppProto pm_results[ALPROTO_MAX];
+    AppProto pm_results[AlprotoMax];
     memset(pm_results, 0, sizeof(pm_results));
     Flow f;
     memset(&f, 0x00, sizeof(f));
@@ -2588,7 +2605,7 @@ static int AppLayerProtoDetectTest11(void)
 
     uint8_t l7data[] = "CONNECT www.ssllabs.com:443 HTTP/1.0\r\n";
     uint8_t l7data_resp[] = "HTTP/1.1 405 Method Not Allowed\r\n";
-    AppProto pm_results[ALPROTO_MAX];
+    AppProto pm_results[AlprotoMax];
     memset(pm_results, 0, sizeof(pm_results));
     Flow f;
     memset(&f, 0x00, sizeof(f));
@@ -2713,7 +2730,7 @@ static int AppLayerProtoDetectTest13(void)
 
     uint8_t l7data[] = "CONNECT www.ssllabs.com:443 HTTP/1.0\r\n";
     uint8_t l7data_resp[] = "HTTP/1.1 405 Method Not Allowed\r\n";
-    AppProto pm_results[ALPROTO_MAX];
+    AppProto pm_results[AlprotoMax];
 
     Flow f;
     memset(&f, 0x00, sizeof(f));
@@ -2784,7 +2801,7 @@ static int AppLayerProtoDetectTest14(void)
 
     uint8_t l7data[] = "CONNECT www.ssllabs.com:443 HTTP/1.0\r\n";
     uint8_t l7data_resp[] = "HTTP/1.1 405 Method Not Allowed\r\n";
-    AppProto pm_results[ALPROTO_MAX];
+    AppProto pm_results[AlprotoMax];
     uint32_t cnt;
     Flow f;
     memset(&f, 0x00, sizeof(f));
