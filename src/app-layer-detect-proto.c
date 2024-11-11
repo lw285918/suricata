@@ -67,8 +67,6 @@
 
 typedef struct AppLayerProtoDetectProbingParserElement_ {
     AppProto alproto;
-    /* \todo calculate at runtime and get rid of this var */
-    uint32_t alproto_mask;
     /* the min length of data that has to be supplied to invoke the parser */
     uint16_t min_depth;
     /* the max length of data after which this parser won't be invoked */
@@ -89,8 +87,6 @@ typedef struct AppLayerProtoDetectProbingParserPort_ {
     /* wether to use this probing parser port-based */
     // WebSocket has this set to false as it only works with protocol change
     bool use_ports;
-
-    uint32_t alproto_mask;
 
     /* the max depth for all the probing parsers registered for this port */
     uint16_t dp_max_depth;
@@ -480,11 +476,20 @@ static AppProto AppLayerProtoDetectPEGetProto(Flow *f, uint8_t flags)
 }
 
 static inline AppProto PPGetProto(const AppLayerProtoDetectProbingParserElement *pe, Flow *f,
-        uint8_t flags, const uint8_t *buf, uint32_t buflen, uint32_t *alproto_masks, uint8_t *rdir)
+        uint8_t flags, const uint8_t *buf, uint32_t buflen, uint32_t *alproto_masks, uint8_t *rdir,
+        uint8_t *nb_tried)
 {
     while (pe != NULL) {
-        if ((buflen < pe->min_depth)  ||
-            (alproto_masks[0] & pe->alproto_mask)) {
+        // callers make alproto_masks and nb_tried are either both defined or both NULL
+        if (alproto_masks != NULL) {
+            DEBUG_VALIDATE_BUG_ON(*nb_tried >= 32);
+            if (buflen < pe->min_depth || (alproto_masks[0] & BIT_U32(*nb_tried))) {
+                // skip if already failed once
+                pe = pe->next;
+                *nb_tried = *nb_tried + 1;
+                continue;
+            }
+        } else if (buflen < pe->min_depth) {
             pe = pe->next;
             continue;
         }
@@ -498,9 +503,12 @@ static inline AppProto PPGetProto(const AppLayerProtoDetectProbingParserElement 
         if (AppProtoIsValid(alproto)) {
             SCReturnUInt(alproto);
         }
-        if (alproto == ALPROTO_FAILED ||
-            (pe->max_depth != 0 && buflen > pe->max_depth)) {
-            alproto_masks[0] |= pe->alproto_mask;
+        if (alproto_masks != NULL) {
+            if ((alproto == ALPROTO_FAILED || (pe->max_depth != 0 && buflen > pe->max_depth))) {
+                // This PE failed, mask it from now on
+                alproto_masks[0] |= BIT_U32(*nb_tried);
+            }
+            *nb_tried = *nb_tried + 1;
         }
         pe = pe->next;
     }
@@ -524,8 +532,20 @@ static AppProto AppLayerProtoDetectPPGetProto(Flow *f, const uint8_t *buf, uint3
     const AppLayerProtoDetectProbingParserElement *pe1 = NULL;
     const AppLayerProtoDetectProbingParserElement *pe2 = NULL;
     AppProto alproto = ALPROTO_UNKNOWN;
+    // number of tried protocols :
+    // used against alproto_masks to see if al tried protocols failed
+    // Instead of keeping a bitmask for all protocols, we
+    // use only the protocols relevant to this flow, so as to
+    // have alproto_masks a u32 but we have more than 32 alprotos
+    // in Suricata, but we do not allow more than 32 probing parsers
+    // on one flow.
+    // alproto_masks is consistent throughout different calls here
+    // from different packets in the flow.
+    // We can have up to 4 calls to PPGetProto with a mask :
+    // destination port (probing parser), source port,
+    // and again with the reversed flow in case of midstream.
+    uint8_t nb_tried = 0;
     uint32_t *alproto_masks = NULL;
-    uint32_t mask = 0;
     uint8_t idir = (flags & (STREAM_TOSERVER | STREAM_TOCLIENT));
     uint8_t dir = idir;
     uint16_t dp = f->protodetect_dp ? f->protodetect_dp : FLOW_GET_DP(f);
@@ -607,26 +627,22 @@ again_midstream:
 
     /* run the parser(s): always call with original direction */
     uint8_t rdir = 0;
-    alproto = PPGetProto(pe0, f, flags, buf, buflen, alproto_masks, &rdir);
+    // pe0 can change based on the flow state, do not use mask for it
+    alproto = PPGetProto(pe0, f, flags, buf, buflen, NULL, &rdir, NULL);
     if (AppProtoIsValid(alproto))
         goto end;
-    alproto = PPGetProto(pe1, f, flags, buf, buflen, alproto_masks, &rdir);
+    alproto = PPGetProto(pe1, f, flags, buf, buflen, alproto_masks, &rdir, &nb_tried);
     if (AppProtoIsValid(alproto))
         goto end;
-    alproto = PPGetProto(pe2, f, flags, buf, buflen, alproto_masks, &rdir);
+    alproto = PPGetProto(pe2, f, flags, buf, buflen, alproto_masks, &rdir, &nb_tried);
     if (AppProtoIsValid(alproto))
         goto end;
 
     /* get the mask we need for this direction */
     if (dir == idir) {
-        if (pp_port_dp && pp_port_sp)
-            mask = pp_port_dp->alproto_mask|pp_port_sp->alproto_mask;
-        else if (pp_port_dp)
-            mask = pp_port_dp->alproto_mask;
-        else if (pp_port_sp)
-            mask = pp_port_sp->alproto_mask;
-
-        if (alproto_masks[0] == mask) {
+        // if we tried 3 protocols, we set probing parsing done if
+        // alproto_masks[0] = 7 = 0b111 = BIT_U32(3) - 1 = 1<<3 - 1
+        if (alproto_masks[0] == BIT_U32(nb_tried) - 1) {
             FLOW_SET_PP_DONE(f, dir);
             SCLogDebug("%s, mask is now %08x, needed %08x, so done",
                     (dir == STREAM_TOSERVER) ? "toserver":"toclient",
@@ -688,17 +704,6 @@ static void AppLayerProtoDetectPPGetIpprotos(AppProto alproto,
     }
 
     SCReturn;
-}
-
-static uint32_t AppLayerProtoDetectProbingParserGetMask(AppProto alproto)
-{
-    SCEnter();
-
-    if (!(alproto > ALPROTO_UNKNOWN && alproto < ALPROTO_FAILED)) {
-        FatalError("Unknown protocol detected - %u", alproto);
-    }
-
-    SCReturnUInt(BIT_U32(alproto));
 }
 
 static AppLayerProtoDetectProbingParserElement *AppLayerProtoDetectProbingParserElementAlloc(void)
@@ -794,7 +799,6 @@ static AppLayerProtoDetectProbingParserElement *AppLayerProtoDetectProbingParser
     AppLayerProtoDetectProbingParserElement *pe = AppLayerProtoDetectProbingParserElementAlloc();
 
     pe->alproto = alproto;
-    pe->alproto_mask = AppLayerProtoDetectProbingParserGetMask(alproto);
     pe->min_depth = min_depth;
     pe->max_depth = max_depth;
     pe->next = NULL;
@@ -825,7 +829,6 @@ AppLayerProtoDetectProbingParserElementDuplicate(AppLayerProtoDetectProbingParse
     AppLayerProtoDetectProbingParserElement *new_pe = AppLayerProtoDetectProbingParserElementAlloc();
 
     new_pe->alproto = pe->alproto;
-    new_pe->alproto_mask = pe->alproto_mask;
     new_pe->min_depth = pe->min_depth;
     new_pe->max_depth = pe->max_depth;
     new_pe->ProbingParserTs = pe->ProbingParserTs;
@@ -1030,7 +1033,6 @@ static void AppLayerProtoDetectInsertNewProbingParser(AppLayerProtoDetectProbing
                 AppLayerProtoDetectProbingParserElement *dup_pe =
                     AppLayerProtoDetectProbingParserElementDuplicate(zero_pe);
                 AppLayerProtoDetectProbingParserElementAppend(&curr_port->dp, dup_pe);
-                curr_port->alproto_mask |= dup_pe->alproto_mask;
             }
 
             zero_pe = zero_port->sp;
@@ -1047,7 +1049,6 @@ static void AppLayerProtoDetectInsertNewProbingParser(AppLayerProtoDetectProbing
                 AppLayerProtoDetectProbingParserElement *dup_pe =
                     AppLayerProtoDetectProbingParserElementDuplicate(zero_pe);
                 AppLayerProtoDetectProbingParserElementAppend(&curr_port->sp, dup_pe);
-                curr_port->alproto_mask |= dup_pe->alproto_mask;
             }
         } /* if (zero_port != NULL) */
     } /* if (curr_port == NULL) */
@@ -1088,7 +1089,6 @@ static void AppLayerProtoDetectInsertNewProbingParser(AppLayerProtoDetectProbing
             curr_port->dp_max_depth < new_pe->max_depth) {
             curr_port->dp_max_depth = new_pe->max_depth;
         }
-        curr_port->alproto_mask |= new_pe->alproto_mask;
         head_pe = &curr_port->dp;
     } else {
         curr_pe->ProbingParserTs = ProbingParser2;
@@ -1101,7 +1101,6 @@ static void AppLayerProtoDetectInsertNewProbingParser(AppLayerProtoDetectProbing
             curr_port->sp_max_depth < new_pe->max_depth) {
             curr_port->sp_max_depth = new_pe->max_depth;
         }
-        curr_port->alproto_mask |= new_pe->alproto_mask;
         head_pe = &curr_port->sp;
     }
     AppLayerProtoDetectProbingParserElementAppend(head_pe, new_pe);
@@ -1119,9 +1118,8 @@ static void AppLayerProtoDetectInsertNewProbingParser(AppLayerProtoDetectProbing
                     temp_port->dp_max_depth < curr_pe->max_depth) {
                     temp_port->dp_max_depth = curr_pe->max_depth;
                 }
-                AppLayerProtoDetectProbingParserElementAppend(&temp_port->dp,
-                                                              AppLayerProtoDetectProbingParserElementDuplicate(curr_pe));
-                temp_port->alproto_mask |= curr_pe->alproto_mask;
+                AppLayerProtoDetectProbingParserElementAppend(
+                        &temp_port->dp, AppLayerProtoDetectProbingParserElementDuplicate(curr_pe));
             } else {
                 if (temp_port->sp == NULL)
                     temp_port->sp_max_depth = curr_pe->max_depth;
@@ -1131,9 +1129,8 @@ static void AppLayerProtoDetectInsertNewProbingParser(AppLayerProtoDetectProbing
                     temp_port->sp_max_depth < curr_pe->max_depth) {
                     temp_port->sp_max_depth = curr_pe->max_depth;
                 }
-                AppLayerProtoDetectProbingParserElementAppend(&temp_port->sp,
-                                                              AppLayerProtoDetectProbingParserElementDuplicate(curr_pe));
-                temp_port->alproto_mask |= curr_pe->alproto_mask;
+                AppLayerProtoDetectProbingParserElementAppend(
+                        &temp_port->sp, AppLayerProtoDetectProbingParserElementDuplicate(curr_pe));
             }
             temp_port = temp_port->next;
         } /* while */
